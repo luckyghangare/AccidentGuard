@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Shield / Safety symbol -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24 L30,34 L30,54 C30,68.8 40.2,82.5 54,86 C67.8,82.5 78,68.8 78,54 L78,34 Z" />
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M51,40 L57,40 L57,60 L51,60 Z" />
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M51,66 L57,66 L57,72 L51,72 Z" />
+</vector>
