@@ -176,7 +176,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = serverUrlInput,
                             onValueChange = { serverUrlInput = it },
-                            placeholder = { Text("http://192.168.1.35:8000/", fontSize = 12.sp) },
+                            placeholder = { Text("https://accidentguard.onrender.com/", fontSize = 12.sp) },
                             textStyle = TextStyle(color = Color(0xFF1A1A1A), fontSize = 13.sp, fontWeight = FontWeight.Medium),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color(0xFF1A1A1A),
@@ -224,8 +224,8 @@ fun LoginScreen(
                             color = Color.White,
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8)),
                             modifier = Modifier.clickable {
-                                serverUrlInput = "http://192.168.1.35:8000/"
-                                tokenManager.setServerUrl("http://192.168.1.35:8000/")
+                                serverUrlInput = "https://accidentguard.onrender.com/"
+                                tokenManager.setServerUrl("https://accidentguard.onrender.com/")
                                 savedServerUrl = tokenManager.getServerUrl()
                                 Toast.makeText(context, "Set to Wi-Fi IP (192.168.1.35)", Toast.LENGTH_SHORT).show()
                             }
@@ -244,8 +244,8 @@ fun LoginScreen(
                             color = Color.White,
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8)),
                             modifier = Modifier.clickable {
-                                serverUrlInput = "http://10.0.2.2:8000/"
-                                tokenManager.setServerUrl("http://10.0.2.2:8000/")
+                                serverUrlInput = "https://accidentguard.onrender.com/"
+                                tokenManager.setServerUrl("https://accidentguard.onrender.com/")
                                 savedServerUrl = tokenManager.getServerUrl()
                                 Toast.makeText(context, "Set to Emulator (10.0.2.2)", Toast.LENGTH_SHORT).show()
                             }
@@ -264,8 +264,8 @@ fun LoginScreen(
                             color = Color.White,
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8)),
                             modifier = Modifier.clickable {
-                                serverUrlInput = "http://127.0.0.1:8000/"
-                                tokenManager.setServerUrl("http://127.0.0.1:8000/")
+                                serverUrlInput = "https://accidentguard.onrender.com/"
+                                tokenManager.setServerUrl("https://accidentguard.onrender.com/")
                                 savedServerUrl = tokenManager.getServerUrl()
                                 Toast.makeText(context, "Set to Localhost", Toast.LENGTH_SHORT).show()
                             }
@@ -455,7 +455,7 @@ fun LoginScreen(
                             value = serverUrlInput,
                             onValueChange = { serverUrlInput = it },
                             label = { Text("Server URL") },
-                            placeholder = { Text("http://192.168.1.35:8000/") },
+                            placeholder = { Text("https://accidentguard.onrender.com/") },
                             textStyle = TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color(0xFF1A1A1A),

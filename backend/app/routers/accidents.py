@@ -1,27 +1,67 @@
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
+
 from app.database import get_db
-from app.models import Accident, Vehicle, EmergencyContact, Notification, User, Hospital, HospitalEmergencyAlert
+from app.models import (
+    Accident,
+    Vehicle,
+    EmergencyContact,
+    Notification,
+    User,
+    Hospital,
+    HospitalEmergencyAlert,
+)
 from app.schemas.accident import AccidentCreate, AccidentResponse
 from app.utils.response import success_response, error_response
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/accidents", tags=["Accidents"])
 
+
+def get_user_accident(
+        accident_id: int,
+        current_user: User,
+        db: Session,
+):
+    """Return an accident only when it belongs to the current user's vehicle."""
+    return (
+        db.query(Accident)
+        .join(Vehicle, Accident.vehicle_id == Vehicle.id)
+        .filter(
+            Accident.id == accident_id,
+            Vehicle.user_id == current_user.id,
+            )
+        .first()
+    )
+
+
 @router.post("")
 @router.post("/report")
-def record_accident(accident_in: AccidentCreate, db: Session = Depends(get_db)):
-    vehicle = db.query(Vehicle).filter(Vehicle.id == accident_in.vehicle_id).first()
+def record_accident(
+        accident_in: AccidentCreate,
+        db: Session = Depends(get_db),
+):
+    vehicle = (
+        db.query(Vehicle)
+        .filter(Vehicle.id == accident_in.vehicle_id)
+        .first()
+    )
+
     if not vehicle:
-        return error_response("NOT_FOUND", "Vehicle not found", status_code=404)
-    
+        return error_response(
+            "NOT_FOUND",
+            "Vehicle not found",
+            status_code=404,
+        )
+
     now = datetime.now()
     date_str = accident_in.date_str or now.strftime("%d %B %Y")
     time_str = accident_in.time_str or now.strftime("%I:%M %p")
 
-    # Severity computation
     impact = accident_in.impact_g
+
     if impact >= 8.0:
         severity = "Critical / High Rollover Risk"
     elif impact >= 5.0:
@@ -32,79 +72,188 @@ def record_accident(accident_in: AccidentCreate, db: Session = Depends(get_db)):
         severity = "Minor Impact"
 
     accident = Accident(
-        vehicle_id=accident_in.vehicle_id,
+        vehicle_id=vehicle.id,
         date_str=date_str,
         time_str=time_str,
         latitude=accident_in.latitude,
         longitude=accident_in.longitude,
-        impact_g=accident_in.impact_g,
-        status="emergency_sent"
+        impact_g=impact,
+        status="emergency_sent",
     )
-    db.add(accident)
-    db.commit()
-    db.refresh(accident)
 
-    # 1. Dispatch notifications to victim's emergency contacts
-    contacts = db.query(EmergencyContact).filter(EmergencyContact.user_id == vehicle.user_id).all()
-    for contact in contacts:
-        msg = f"EMERGENCY ALERT: Crash detected on {vehicle.name} ({vehicle.vehicle_number}) at ({accident.latitude}, {accident.longitude}). Impact: {accident.impact_g}g ({severity})."
-        notif = Notification(
-            accident_id=accident.id,
-            recipient_phone=contact.phone_number,
-            message_body=msg,
-            status="sent"
+    try:
+        db.add(accident)
+        db.flush()
+
+        contacts = (
+            db.query(EmergencyContact)
+            .filter(EmergencyContact.user_id == vehicle.user_id)
+            .all()
         )
-        db.add(notif)
 
-    # 2. Dispatch emergency alerts to registered hospitals
-    hospitals = db.query(Hospital).filter(Hospital.is_active == True).all()
-    for hosp in hospitals:
-        alert = HospitalEmergencyAlert(
-            hospital_id=hosp.id,
-            accident_id=accident.id,
-            status="PENDING",
-            damage_severity=severity,
-            notes=f"Auto-generated crash alert from Vehicle {vehicle.vehicle_number}."
+        for contact in contacts:
+            msg = (
+                f"EMERGENCY ALERT: Crash detected on {vehicle.name} "
+                f"({vehicle.vehicle_number}) at "
+                f"({accident.latitude}, {accident.longitude}). "
+                f"Impact: {impact}g ({severity})."
+            )
+
+            db.add(
+                Notification(
+                    accident_id=accident.id,
+                    recipient_phone=contact.phone_number,
+                    message_body=msg,
+                    status="sent",
+                )
+            )
+
+        hospitals = (
+            db.query(Hospital)
+            .filter(Hospital.is_active.is_(True))
+            .all()
         )
-        db.add(alert)
 
-    db.commit()
+        for hospital in hospitals:
+            db.add(
+                HospitalEmergencyAlert(
+                    hospital_id=hospital.id,
+                    accident_id=accident.id,
+                    status="PENDING",
+                    damage_severity=severity,
+                    notes=(
+                        "Auto-generated crash alert from Vehicle "
+                        f"{vehicle.vehicle_number}."
+                    ),
+                )
+            )
+
+        db.commit()
+        db.refresh(accident)
+
+    except Exception:
+        db.rollback()
+        raise
 
     data = AccidentResponse.model_validate(accident).model_dump()
-    return success_response(data=data, message="Accident recorded, emergency contacts notified, and hospital alert dispatched!", status_code=201)
+
+    return success_response(
+        data=data,
+        message=(
+            "Accident recorded and notification/hospital alert "
+            "records created."
+        ),
+        status_code=201,
+    )
 
 
 @router.get("")
-def list_accidents(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Retrieve accidents for user's vehicles
-    user_vehicle_ids = [v.id for v in current_user.vehicles]
+def list_accidents(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    user_vehicle_ids = [
+        vehicle.id for vehicle in current_user.vehicles
+    ]
+
     if not user_vehicle_ids:
-        return success_response(data=[], message="No accidents recorded")
-        
-    accidents = db.query(Accident).filter(Accident.vehicle_id.in_(user_vehicle_ids)).order_by(Accident.timestamp.desc()).all()
-    
-    data = [AccidentResponse.model_validate(acc).model_dump() for acc in accidents]
-    return success_response(data=data, message="Accidents retrieved successfully")
+        return success_response(
+            data=[],
+            message="No accidents recorded",
+        )
+
+    accidents = (
+        db.query(Accident)
+        .filter(Accident.vehicle_id.in_(user_vehicle_ids))
+        .order_by(Accident.timestamp.desc())
+        .all()
+    )
+
+    data = [
+        AccidentResponse.model_validate(accident).model_dump()
+        for accident in accidents
+    ]
+
+    return success_response(
+        data=data,
+        message="Accidents retrieved successfully",
+    )
 
 
 @router.get("/{accident_id}")
-def get_accident_detail(accident_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accident = db.query(Accident).filter(Accident.id == accident_id).first()
+def get_accident_detail(
+        accident_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    accident = get_user_accident(accident_id, current_user, db)
+
     if not accident:
-        return error_response("NOT_FOUND", "Accident record not found", status_code=404)
-    
+        return error_response(
+            "NOT_FOUND",
+            "Accident record not found",
+            status_code=404,
+        )
+
     data = AccidentResponse.model_validate(accident).model_dump()
-    return success_response(data=data, message="Accident details retrieved successfully")
+
+    return success_response(
+        data=data,
+        message="Accident details retrieved successfully",
+    )
+
 
 @router.put("/{accident_id}/cancel")
-def cancel_accident_alert(accident_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    accident = db.query(Accident).filter(Accident.id == accident_id).first()
+def cancel_accident_alert(
+        accident_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    accident = get_user_accident(accident_id, current_user, db)
+
     if not accident:
-        return error_response("NOT_FOUND", "Accident record not found", status_code=404)
-    
-    accident.status = "cancelled"
-    db.commit()
-    db.refresh(accident)
-    
+        return error_response(
+            "NOT_FOUND",
+            "Accident record not found",
+            status_code=404,
+        )
+
+    if accident.status == "cancelled":
+        data = AccidentResponse.model_validate(accident).model_dump()
+        return success_response(
+            data=data,
+            message="Accident alert is already cancelled",
+        )
+
+    try:
+        accident.status = "cancelled"
+
+        # Only pending hospital alerts can be cancelled safely here.
+        (
+            db.query(HospitalEmergencyAlert)
+            .filter(
+                HospitalEmergencyAlert.accident_id == accident.id,
+                HospitalEmergencyAlert.status == "PENDING",
+                )
+            .update(
+                {"status": "CANCELLED"},
+                synchronize_session=False,
+            )
+        )
+
+        db.commit()
+        db.refresh(accident)
+
+    except Exception:
+        db.rollback()
+        raise
+
     data = AccidentResponse.model_validate(accident).model_dump()
-    return success_response(data=data, message="Emergency alert cancelled successfully")
+
+    return success_response(
+        data=data,
+        message=(
+            "Accident marked as cancelled. Pending hospital alerts "
+            "were cancelled where applicable."
+        ),
+    )

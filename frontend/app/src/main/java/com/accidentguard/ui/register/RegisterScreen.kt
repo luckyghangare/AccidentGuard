@@ -539,7 +539,7 @@ fun RegisterScreen(
                             value = serverUrlInput,
                             onValueChange = { serverUrlInput = it },
                             label = { Text("Server URL") },
-                            placeholder = { Text("http://192.168.1.35:8000/") },
+                            placeholder = { Text("https://accidentguard.onrender.com/") },
                             textStyle = TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color(0xFF1A1A1A),
