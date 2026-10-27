@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     // Default fallback IP address
-    const val DEFAULT_BASE_URL = "http://192.168.1.35:8000/"
+    const val DEFAULT_BASE_URL = "https://accidentguard.onrender.com/"
     var BASE_URL = DEFAULT_BASE_URL
         private set
 

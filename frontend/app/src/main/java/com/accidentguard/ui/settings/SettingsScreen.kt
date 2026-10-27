@@ -477,7 +477,7 @@ fun SettingsScreen(
                         value = serverIpInput,
                         onValueChange = { serverIpInput = it },
                         label = { Text("Server IP:Port") },
-                        placeholder = { Text("e.g. 192.168.1.35:8000") },
+                        placeholder = { Text("e.g. https://accidentguard.onrender.com/") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

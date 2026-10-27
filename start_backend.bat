@@ -33,7 +33,7 @@ if exist "venv\Scripts\uvicorn.exe" (
     echo ============================================================
     echo   Backend running at:
     echo     Local:  http://localhost:8000
-    echo     Phone:  http://192.168.1.35:8000
+    echo     Phone:  https://accidentguard.onrender.com/
     echo     Docs:   http://localhost:8000/docs
     echo ============================================================
     echo.

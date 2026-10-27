@@ -49,3 +49,11 @@ Captures/
 Thumbs.db
 *.swp
 *~
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Database SSL certificate
+backend/ca.pem
