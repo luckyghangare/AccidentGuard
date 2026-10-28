@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accidentguard.data.local.TokenManager
 import com.accidentguard.data.repository.AccidentRepository
+import com.accidentguard.ui.notification.NotificationHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ data class CrashAlertState(
 class CrashViewModel(application: Application) : AndroidViewModel(application) {
     private val tokenManager = TokenManager(application)
     private val accidentRepo = AccidentRepository()
+    private val notificationHelper = NotificationHelper(application)
     private var timerJob: Job? = null
 
     private val _uiState = MutableStateFlow(CrashAlertState())
@@ -36,13 +38,20 @@ class CrashViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = CrashAlertState(
             isCrashDetected = true,
             vehicleName = "Car 01",
-            crashTime = "10:32 PM",
-            locationStr = "21.1458, 79.0882",
-            impactG = 4.8f,
+            crashTime = "Just Now",
+            locationStr = "Live GPS Location",
+            impactG = 5.2f,
             countdownSeconds = 10,
-            alertStatusMessage = "Emergency notification will be sent in 10 seconds.",
+            alertStatusMessage = "CRASH DETECTED! Alerting contacts in 10s...",
             isCancelled = false,
             isSent = false
+        )
+
+        // HIGH PRIORITY NOTIFICATION
+        notificationHelper.showNotification(
+            "⚠️ CRASH DETECTED!", 
+            "Impact detected on Car 01. Emergency alert will be sent in 10 seconds.",
+            isCritical = true
         )
 
         timerJob = viewModelScope.launch {
@@ -59,6 +68,12 @@ class CrashViewModel(application: Application) : AndroidViewModel(application) {
                     isSent = true,
                     alertStatusMessage = "Emergency notification sent."
                 )
+                // FINAL ALERT NOTIFICATION
+                notificationHelper.showNotification(
+                    "🚨 SOS SENT", 
+                    "Emergency services and contacts have been notified of your location.",
+                    isCritical = true
+                )
             }
         }
     }
@@ -73,6 +88,8 @@ class CrashViewModel(application: Application) : AndroidViewModel(application) {
                 isCrashDetected = false,
                 alertStatusMessage = "Emergency alert cancelled."
             )
+            // CANCEL NOTIFICATION
+            notificationHelper.showNotification("Alert Cancelled", "Emergency SOS was cancelled by the user.")
         }
     }
 

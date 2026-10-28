@@ -1,9 +1,12 @@
 package com.accidentguard.ui.settings
 
 import android.widget.Toast
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +27,9 @@ import androidx.navigation.NavController
 import com.accidentguard.data.local.TokenManager
 import com.accidentguard.ui.security.BiometricHelper
 import com.accidentguard.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +46,7 @@ fun SecuritySettingsScreen(
     val lastLogin = remember {
         val timestamp = tokenManager.getLastLoginTime()
         if (timestamp == 0L) "Unknown" 
-        else java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
+        else SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(timestamp))
     }
 
     Scaffold(
@@ -102,7 +109,7 @@ fun SecuritySettingsScreen(
                     Toast.makeText(context, "2FA ${if (enabled) "Enabled" else "Disabled"}", Toast.LENGTH_SHORT).show()
                 }
                 
-                Divider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
                 
                 SettingsToggleRow(
                     icon = Icons.Default.Fingerprint,
@@ -123,7 +130,7 @@ fun SecuritySettingsScreen(
                                 tokenManager.setBiometricEnabled(true)
                                 Toast.makeText(context, "Fingerprint login enabled", Toast.LENGTH_SHORT).show()
                             },
-                            onError = { _, err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() },
+                            onError = { _, err -> Toast.makeText(context, err.toString(), Toast.LENGTH_SHORT).show() },
                             onFailed = { }
                         )
                     } else {
@@ -141,11 +148,11 @@ fun SecuritySettingsScreen(
                 SettingsRow(Icons.Default.Password, "Change Password", "Update your account credential", PrimaryBlue) {
                     // Navigate to change password or show dialog
                 }
-                Divider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
                 SettingsRow(Icons.Default.Devices, "Manage Trusted Devices", "View your active sessions", TextSecondary) {
                     Toast.makeText(context, "Cloud sync required for this feature", Toast.LENGTH_SHORT).show()
                 }
-                Divider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
                 SettingsRow(Icons.Default.History, "Security Logs", "View recent login attempts", TextSecondary) {
                     Toast.makeText(context, "Cloud sync required for this feature", Toast.LENGTH_SHORT).show()
                 }
@@ -187,7 +194,7 @@ fun SettingsToggleRow(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clip(CircleShape)
                     .background(iconTint.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
