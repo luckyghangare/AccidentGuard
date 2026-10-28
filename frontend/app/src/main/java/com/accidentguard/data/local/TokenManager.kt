@@ -27,6 +27,11 @@ class TokenManager(context: Context) {
         private const val KEY_DARK_MODE = "dark_mode"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_SERVER_URL = "server_url"
+
+        // Security Settings
+        private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
+        private const val KEY_2FA_ENABLED = "two_fa_enabled"
+        private const val KEY_LAST_LOGIN_TIME = "last_login_time"
     }
 
     fun getServerUrl(): String = prefs.getString(KEY_SERVER_URL, RetrofitClient.DEFAULT_BASE_URL) ?: RetrofitClient.DEFAULT_BASE_URL
@@ -54,6 +59,7 @@ class TokenManager(context: Context) {
             .putString(KEY_USER_EMAIL, email)
             .putString(KEY_USER_PHONE, phone)
             .putInt(KEY_USER_ID, userId)
+            .putLong(KEY_LAST_LOGIN_TIME, System.currentTimeMillis())
             .apply()
     }
 
@@ -70,6 +76,7 @@ class TokenManager(context: Context) {
             .putString(KEY_HOSPITAL_ADDRESS, hospital.address)
             .putInt(KEY_HOSPITAL_TOTAL_AMB, hospital.totalAmbulances)
             .putInt(KEY_HOSPITAL_AVAIL_AMB, hospital.availableAmbulances)
+            .putLong(KEY_LAST_LOGIN_TIME, System.currentTimeMillis())
             .apply()
     }
 
@@ -86,6 +93,20 @@ class TokenManager(context: Context) {
     fun getUserPhone(): String = prefs.getString(KEY_USER_PHONE, "") ?: ""
 
     fun getUserId(): Int = prefs.getInt(KEY_USER_ID, 0)
+
+    fun getLastLoginTime(): Long = prefs.getLong(KEY_LAST_LOGIN_TIME, 0)
+
+    fun isBiometricEnabled(): Boolean = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply()
+    }
+
+    fun is2FAEnabled(): Boolean = prefs.getBoolean(KEY_2FA_ENABLED, false)
+
+    fun set2FAEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_2FA_ENABLED, enabled).apply()
+    }
 
     fun getHospitalCity(): String = prefs.getString(KEY_HOSPITAL_CITY, "Nagpur") ?: "Nagpur"
 
