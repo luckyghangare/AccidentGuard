@@ -69,8 +69,9 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
 
     fun directDispatchAmbulance(alertId: Int) {
         val token = tokenManager.getAuthToken() ?: return
-        val currentAvail = _stats.value?.availableAmbulances ?: tokenManager.getHospitalAvailableAmbulances()
         
+        // Optimistic check
+        val currentAvail = _stats.value?.availableAmbulances ?: tokenManager.getHospitalAvailableAmbulances()
         if (currentAvail <= 0) {
             _uiState.value = HospitalUiState.Error("No ambulances available for dispatch!")
             return
@@ -78,16 +79,18 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             _uiState.value = HospitalUiState.ActionLoading
-            val result = repo.dispatchAmbulance(
-                token = token,
-                alertId = alertId,
-                // Server generates default amb number if not provided
-            )
+            val result = repo.dispatchAmbulance(token = token, alertId = alertId)
+            
             result.onSuccess {
                 _uiState.value = HospitalUiState.Success("Ambulance dispatched successfully!")
                 loadDashboard()
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Dispatch failed")
+            }.onFailure { error ->
+                val errorMsg = error.message ?: "Dispatch failed"
+                if (errorMsg.contains("available", ignoreCase = true) || errorMsg.contains("empty", ignoreCase = true)) {
+                    _uiState.value = HospitalUiState.Error("Failed: All ambulances are currently busy.")
+                } else {
+                    _uiState.value = HospitalUiState.Error("System Error: $errorMsg")
+                }
             }
         }
     }
@@ -101,10 +104,9 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
         notes: String
     ) {
         val token = tokenManager.getAuthToken() ?: return
-        val currentAvail = _stats.value?.availableAmbulances ?: tokenManager.getHospitalAvailableAmbulances()
         
-        if (currentAvail <= 0) {
-            _uiState.value = HospitalUiState.Error("No ambulances available for dispatch!")
+        if (ambulanceNumber.isBlank()) {
+            _uiState.value = HospitalUiState.Error("Ambulance number is required")
             return
         }
 
@@ -122,8 +124,8 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
             result.onSuccess {
                 _uiState.value = HospitalUiState.Success("Ambulance ${it.ambulanceNumber} dispatched!")
                 loadDashboard()
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Ambulance dispatch failed")
+            }.onFailure { error ->
+                _uiState.value = HospitalUiState.Error("Assignment Failed: ${error.message ?: "Unknown error"}")
             }
         }
     }
