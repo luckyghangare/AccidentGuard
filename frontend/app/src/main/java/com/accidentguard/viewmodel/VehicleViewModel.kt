@@ -44,7 +44,7 @@ class VehicleViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             while (true) { // Real-time loop
                 val token = tokenManager.getAuthToken() ?: break
-                
+
                 // Get logged in user's vehicle
                 val vehicleRes = vehicleRepo.getVehicles(token)
                 val vehicle = vehicleRes.getOrNull()?.firstOrNull()
@@ -58,7 +58,7 @@ class VehicleViewModel(application: Application) : AndroidViewModel(application)
                                 // CRITICAL ALERT NOTIFICATION
                                 if (_uiState.value.obstacleStatus != "CRITICAL") {
                                     notificationHelper.showNotification(
-                                        "🛑 CRITICAL WARNING", 
+                                        "🛑 CRITICAL WARNING",
                                         "Obstacle detected very close (${dist.toInt()}cm)! Brake now.",
                                         isCritical = true
                                     )
@@ -73,7 +73,7 @@ class VehicleViewModel(application: Application) : AndroidViewModel(application)
                         // HIGH G-FORCE NOTIFICATION
                         if (reading.accelerationG > 4.0f && _uiState.value.mpuStatus != "High Impact") {
                             notificationHelper.showNotification(
-                                "⚠️ High Impact Detected", 
+                                "⚠️ High Impact Detected",
                                 "Sudden deceleration of ${reading.accelerationG}G detected.",
                                 isCritical = true
                             )

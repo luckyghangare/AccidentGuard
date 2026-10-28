@@ -143,16 +143,16 @@ fun OtpVerificationScreen(
                     color = TextSecondary
                 )
             } else {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     timer = 60
                     viewModel.resendOtp(email)
                 }) {
                     Text("Resend Verification Code", color = PrimaryBlue, fontWeight = FontWeight.Bold)
                 }
             }
-            
+
             Spacer(modifier = Modifier.weight(1f))
-            
+
             Text(
                 text = "Tip: Use 123456 for testing purpose",
                 fontSize = 12.sp,

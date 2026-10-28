@@ -29,10 +29,10 @@ class LocationService : Service() {
     companion object {
         private const val CHANNEL_ID = "location_tracking_channel"
         private const val NOTIFICATION_ID = 12345
-        
+
         private val _locationFlow = MutableSharedFlow<Location>(extraBufferCapacity = 1)
         val locationFlow = _locationFlow.asSharedFlow()
-        
+
         var isTracking = false
             private set
     }
@@ -40,7 +40,7 @@ class LocationService : Service() {
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        
+
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->

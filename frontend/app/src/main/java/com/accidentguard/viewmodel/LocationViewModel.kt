@@ -52,7 +52,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     init {
         checkRequirements()
         observeLocationUpdates()
-        
+
         // Register receiver for location provider changes
         val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
         context.registerReceiver(gpsReceiver, filter)
@@ -62,7 +62,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         val hasFineLocation = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        
+
         val hasCoarseLocation = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
@@ -73,7 +73,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             locationManager.isLocationEnabled
         } else {
             try {
-                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
             } catch (e: Exception) {
                 false
@@ -105,7 +105,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     private fun updateStateWithLocation(location: Location) {
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val currentTime = sdf.format(Date())
-        
+
         _uiState.value = _uiState.value.copy(
             latitude = location.latitude,
             longitude = location.longitude,

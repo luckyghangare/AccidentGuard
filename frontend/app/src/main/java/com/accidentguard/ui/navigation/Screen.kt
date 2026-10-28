@@ -12,7 +12,7 @@ sealed class Screen(val route: String) {
     object AccidentHistory : Screen("accident_history")
     object EmergencyContacts : Screen("emergency_contacts")
     object Settings : Screen("settings")
-    
+
     // Safety & Security Screens
     object PermissionRequired : Screen("permission_required")
     object GpsRequired : Screen("gps_required")

@@ -36,7 +36,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             val is2FAEnabledLocally = tokenManager.is2FAEnabled()
-            
+
             when (val result = repo.loginUnified(email.trim(), pass)) {
                 is UnifiedLoginResult.UserSuccess -> {
                     if (is2FAEnabledLocally) {
@@ -87,7 +87,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = AuthUiState.Error("Please enter a valid 6-digit code")
             return
         }
-        
+
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
             if (otp == "123456" || otp == "000000") {

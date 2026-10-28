@@ -1,3 +1,4 @@
+
 package com.accidentguard.viewmodel
 
 import android.app.Application
@@ -5,7 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.accidentguard.data.local.TokenManager
 import com.accidentguard.data.model.EmergencyAlert
-import com.accidentguard.data.model.Hospital
 import com.accidentguard.data.model.HospitalStats
 import com.accidentguard.data.repository.HospitalRepository
 import com.accidentguard.ui.notification.NotificationHelper
@@ -16,11 +16,13 @@ import kotlinx.coroutines.launch
 sealed class HospitalUiState {
     object Idle : HospitalUiState()
     object Loading : HospitalUiState()
+    object ActionLoading : HospitalUiState()
     data class Success(val message: String) : HospitalUiState()
     data class Error(val message: String) : HospitalUiState()
 }
 
 class HospitalViewModel(application: Application) : AndroidViewModel(application) {
+
     private val repo = HospitalRepository()
     val tokenManager = TokenManager(application)
     private val notificationHelper = NotificationHelper(application)
@@ -44,54 +46,97 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
 
     fun loadDashboard(isUserInitiated: Boolean = false) {
         val token = tokenManager.getAuthToken() ?: return
-        viewModelScope.launch {
-            _uiState.value = HospitalUiState.Loading
 
-            // Load Alerts
-            repo.getAlerts(token).onSuccess { newAlerts ->
-                // Check if there are new alerts since last load to notify
-                val currentAlerts = _alerts.value
-                if (currentAlerts.isNotEmpty() && newAlerts.size > currentAlerts.size) {
-                    val count = newAlerts.size - currentAlerts.size
-                    notificationHelper.showNotification(
-                        "🚨 NEW EMERGENCY", 
-                        "You have $count new accident report(s) nearby!",
-                        isCritical = true
-                    )
-                }
-                _alerts.value = newAlerts
-                _uiState.value = if (isUserInitiated) HospitalUiState.Success("Dashboard Refreshed") else HospitalUiState.Idle
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Failed to fetch alerts")
+        viewModelScope.launch {
+            if (isUserInitiated) {
+                _uiState.value = HospitalUiState.Loading
             }
 
-            // Load Stats
-            repo.getStats(token, tokenManager).onSuccess {
-                _stats.value = it
+            val previousAlerts = _alerts.value
+            val statsResult = repo.getStats(token)
+            val alertsResult = repo.getAlerts(token)
+
+            statsResult.onSuccess { newStats ->
+                _stats.value = newStats
+                tokenManager.saveHospitalFleet(
+                    newStats.totalAmbulances,
+                    newStats.availableAmbulances
+                )
+            }
+
+            alertsResult.onSuccess { newAlerts ->
+                if (previousAlerts.isNotEmpty() &&
+                    newAlerts.size > previousAlerts.size
+                ) {
+                    val count = newAlerts.size - previousAlerts.size
+                    notificationHelper.showNotification(
+                        "New Emergency",
+                        "$count new accident report(s) received."
+                    )
+                }
+
+                _alerts.value = newAlerts
+                _uiState.value = if (isUserInitiated) {
+                    HospitalUiState.Success("Dashboard Refreshed")
+                } else {
+                    HospitalUiState.Idle
+                }
+            }.onFailure { error ->
+                _uiState.value = HospitalUiState.Error(
+                    error.message ?: "Failed to fetch emergency alerts"
+                )
+            }
+
+            if (statsResult.isFailure && alertsResult.isSuccess) {
+                // Keep the successfully loaded alerts visible if stats fail.
+                _uiState.value = if (isUserInitiated) {
+                    HospitalUiState.Success("Dashboard Refreshed")
+                } else {
+                    HospitalUiState.Idle
+                }
             }
         }
     }
 
-    fun directDispatchAmbulance(alertId: Int, customAmbNo: String? = null) {
+    fun directDispatchAmbulance(alertId: Int) {
         val token = tokenManager.getAuthToken() ?: return
-        val ambNo = customAmbNo?.ifBlank { null } ?: "AMB-${(alertId % 15) + 1}"
+
+        val available = _stats.value?.availableAmbulances
+            ?: tokenManager.getHospitalAvailableAmbulances()
+
+        if (available <= 0) {
+            _uiState.value = HospitalUiState.Error(
+                "No ambulances available for dispatch!"
+            )
+            return
+        }
 
         viewModelScope.launch {
-            _uiState.value = HospitalUiState.Loading
+            _uiState.value = HospitalUiState.ActionLoading
+
             repo.dispatchAmbulance(
                 token = token,
-                alertId = alertId,
-                ambulanceNumber = ambNo,
-                driverName = "Trauma Team",
-                driverPhone = "108",
-                etaMinutes = 8,
-                notes = "Urgent dispatch"
+                alertId = alertId
             ).onSuccess {
-                notificationHelper.showNotification("Ambulance Dispatched", "Unit $ambNo is on the way to the accident site.")
-                _uiState.value = HospitalUiState.Success("⚡ Dispatched!")
+                notificationHelper.showNotification(
+                    "Ambulance Dispatched",
+                    "An ambulance has been assigned to the emergency."
+                )
+                _uiState.value = HospitalUiState.Success(
+                    "Ambulance dispatched successfully!"
+                )
                 loadDashboard()
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Dispatch failed")
+            }.onFailure { error ->
+                val message = error.message ?: "Dispatch failed"
+                _uiState.value = HospitalUiState.Error(
+                    if (message.contains("available", ignoreCase = true) ||
+                        message.contains("empty", ignoreCase = true)
+                    ) {
+                        "All ambulances are currently busy."
+                    } else {
+                        "Dispatch failed: $message"
+                    }
+                )
             }
         }
     }
@@ -105,8 +150,17 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
         notes: String
     ) {
         val token = tokenManager.getAuthToken() ?: return
+
+        if (ambulanceNumber.isBlank()) {
+            _uiState.value = HospitalUiState.Error(
+                "Ambulance number is required"
+            )
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.value = HospitalUiState.Loading
+            _uiState.value = HospitalUiState.ActionLoading
+
             repo.dispatchAmbulance(
                 token = token,
                 alertId = alertId,
@@ -115,59 +169,124 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
                 driverPhone = driverPhone,
                 etaMinutes = etaMinutes,
                 notes = notes
-            ).onSuccess {
-                notificationHelper.showNotification("Ambulance Dispatched", "Unit $ambulanceNumber is on the way.")
-                _uiState.value = HospitalUiState.Success("⚡ Dispatched!")
+            ).onSuccess { alert ->
+                notificationHelper.showNotification(
+                    "Ambulance Dispatched",
+                    "Unit $ambulanceNumber is on the way."
+                )
+                _uiState.value = HospitalUiState.Success(
+                    "Ambulance ${alert.ambulanceNumber} dispatched!"
+                )
                 loadDashboard()
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Dispatch failed")
+            }.onFailure { error ->
+                _uiState.value = HospitalUiState.Error(
+                    "Assignment failed: ${error.message ?: "Unknown error"}"
+                )
             }
+        }
+    }
+
+    fun admitPatient(
+        alertId: Int,
+        notes: String = "Patient admitted and stabilized"
+    ) {
+        val token = tokenManager.getAuthToken() ?: return
+
+        viewModelScope.launch {
+            _uiState.value = HospitalUiState.ActionLoading
+
+            repo.admitPatient(token, alertId, notes)
+                .onSuccess {
+                    notificationHelper.showNotification(
+                        "Patient Admitted",
+                        "The patient admission status was updated."
+                    )
+                    _uiState.value = HospitalUiState.Success(
+                        "Patient admitted successfully."
+                    )
+                    loadDashboard()
+                }
+                .onFailure { error ->
+                    _uiState.value = HospitalUiState.Error(
+                        error.message ?: "Failed to admit patient"
+                    )
+                }
+        }
+    }
+
+    fun updateFleet(
+        total: Int? = null,
+        available: Int? = null
+    ) {
+        val token = tokenManager.getAuthToken() ?: return
+
+        val currentTotal = _stats.value?.totalAmbulances
+            ?: tokenManager.getHospitalTotalAmbulances()
+        val currentAvailable = _stats.value?.availableAmbulances
+            ?: tokenManager.getHospitalAvailableAmbulances()
+
+        val targetTotal = total ?: currentTotal
+        val targetAvailable = available ?: currentAvailable
+
+        if (targetTotal < 1) {
+            _uiState.value = HospitalUiState.Error(
+                "Total fleet must be at least 1"
+            )
+            return
+        }
+
+        if (targetAvailable < 0 || targetAvailable > targetTotal) {
+            _uiState.value = HospitalUiState.Error(
+                "Available ambulances must be between 0 and total fleet"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = HospitalUiState.ActionLoading
+
+            repo.updateFleet(token, total, available)
+                .onSuccess { updatedHospital ->
+                    _stats.value = _stats.value?.copy(
+                        totalAmbulances = updatedHospital.totalAmbulances,
+                        availableAmbulances = updatedHospital.availableAmbulances
+                    )
+
+                    tokenManager.saveHospitalFleet(
+                        updatedHospital.totalAmbulances,
+                        updatedHospital.availableAmbulances
+                    )
+
+                    _uiState.value = HospitalUiState.Success(
+                        "Fleet status updated."
+                    )
+                    loadDashboard()
+                }
+                .onFailure { error ->
+                    _uiState.value = HospitalUiState.Error(
+                        error.message ?: "Failed to update fleet status"
+                    )
+                }
         }
     }
 
     fun adjustAvailableFleet(delta: Int) {
-        val statsVal = _stats.value
-        val currentTotal = statsVal?.totalAmbulances ?: tokenManager.getHospitalTotalAmbulances()
-        val currentAvail = statsVal?.availableAmbulances ?: tokenManager.getHospitalAvailableAmbulances()
-        val newAvail = (currentAvail + delta).coerceIn(0, currentTotal)
-        updateFleet(total = currentTotal, available = newAvail)
-    }
+        val total = _stats.value?.totalAmbulances
+            ?: tokenManager.getHospitalTotalAmbulances()
+        val available = _stats.value?.availableAmbulances
+            ?: tokenManager.getHospitalAvailableAmbulances()
 
-    fun updateFleet(total: Int, available: Int) {
-        val token = tokenManager.getAuthToken() ?: return
-        viewModelScope.launch {
-            _uiState.value = HospitalUiState.Loading
-            repo.updateFleet(token, total, available).onSuccess { updatedHospital ->
-                val currentStats = _stats.value
-                if (currentStats != null) {
-                    _stats.value = currentStats.copy(
-                        totalAmbulances = updatedHospital.totalAmbulances,
-                        availableAmbulances = updatedHospital.availableAmbulances
-                    )
-                }
-                _uiState.value = HospitalUiState.Success("Fleet Updated")
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Fleet update failed")
-            }
-        }
-    }
+        val newAvailable = (available + delta).coerceIn(0, total)
 
-    fun admitPatient(alertId: Int) {
-        val token = tokenManager.getAuthToken() ?: return
-        viewModelScope.launch {
-            _uiState.value = HospitalUiState.Loading
-            repo.admitPatient(token, alertId, "Stabilized").onSuccess {
-                notificationHelper.showNotification("Patient Admitted", "Victim safely reached the hospital and is being treated.")
-                _uiState.value = HospitalUiState.Success("✅ Patient Admitted")
-                loadDashboard()
-            }.onFailure {
-                _uiState.value = HospitalUiState.Error(it.message ?: "Admission failed")
-            }
+        if (newAvailable != available) {
+            updateFleet(total = total, available = newAvailable)
         }
     }
 
     fun logout() {
         tokenManager.clear()
-        notificationHelper.showNotification("Logged Out", "Hospital authority logged out.")
+        _alerts.value = emptyList()
+        _stats.value = null
+        _uiState.value = HospitalUiState.Idle
     }
 }

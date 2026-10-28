@@ -47,12 +47,12 @@ fun RegisterScreen(
 ) {
     val context = LocalContext.current
     val tokenManager = remember(context) { TokenManager(context) }
-    
+
     val uiState by viewModel.uiState.collectAsState()
 
     var showServerConfigDialog by remember { mutableStateOf<Boolean>(false) }
     var serverUrlInput by remember { mutableStateOf<String>(tokenManager.getServerUrl()) }
-    
+
     var selectedRole by remember { mutableStateOf<RegistrationRole>(RegistrationRole.USER) }
 
     // User Form Fields
@@ -181,7 +181,7 @@ fun RegisterScreen(
                 CustomOutlinedTextField(value = userPhone, onValueChange = { input -> userPhone = input }, label = "Phone Number", leadingIcon = Icons.Default.Phone, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), tintColor = PrimaryBlue)
                 CustomOutlinedTextField(value = userPassword, onValueChange = { input -> userPassword = input }, label = "Password", leadingIcon = Icons.Default.Lock, isPassword = true, tintColor = PrimaryBlue)
                 CustomOutlinedTextField(value = userConfirmPassword, onValueChange = { input -> userConfirmPassword = input }, label = "Confirm Password", leadingIcon = Icons.Default.Lock, isPassword = true, tintColor = PrimaryBlue)
-                
+
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Checkbox(checked = userTermsAccepted, onCheckedChange = { checked -> userTermsAccepted = checked }, colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue))
                     Text(text = "I accept Terms & Conditions", fontSize = 12.sp, color = TextSecondary)
@@ -204,7 +204,7 @@ fun RegisterScreen(
                 CustomOutlinedTextField(value = hospitalName, onValueChange = { input -> hospitalName = input }, label = "Hospital Name", leadingIcon = Icons.Default.LocalHospital, tintColor = hospTint)
                 CustomOutlinedTextField(value = hospitalEmail, onValueChange = { input -> hospitalEmail = input }, label = "Official Email", leadingIcon = Icons.Default.Email, tintColor = hospTint)
                 CustomOutlinedTextField(value = hospitalPhone, onValueChange = { input -> hospitalPhone = input }, label = "Emergency Number", leadingIcon = Icons.Default.Phone, tintColor = hospTint)
-                
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = hospitalCity,
@@ -224,7 +224,7 @@ fun RegisterScreen(
                         singleLine = true
                     )
                 }
-                
+
                 CustomOutlinedTextField(value = hospitalAddress, onValueChange = { input -> hospitalAddress = input }, label = "Street Address", leadingIcon = Icons.Default.LocationOn, tintColor = hospTint)
                 CustomOutlinedTextField(value = hospitalPassword, onValueChange = { input -> hospitalPassword = input }, label = "Password", leadingIcon = Icons.Default.Lock, isPassword = true, tintColor = hospTint)
                 CustomOutlinedTextField(value = hospitalConfirmPassword, onValueChange = { input -> hospitalConfirmPassword = input }, label = "Confirm Password", leadingIcon = Icons.Default.Lock, isPassword = true, tintColor = hospTint)
@@ -236,7 +236,7 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { 
+                    onClick = {
                         val ambNum = hospitalAmbulances.toIntOrNull() ?: 5
                         viewModel.registerHospital(hospitalName, hospitalEmail, hospitalPhone, hospitalAddress, hospitalCity, ambNum, hospitalPassword, hospitalConfirmPassword, hospitalTermsAccepted)
                     },
@@ -262,9 +262,9 @@ fun RegisterScreen(
             AlertDialog(
                 onDismissRequest = { showServerConfigDialog = false },
                 confirmButton = {
-                    Button(onClick = { 
+                    Button(onClick = {
                         tokenManager.setServerUrl(serverUrlInput)
-                        showServerConfigDialog = false 
+                        showServerConfigDialog = false
                         Toast.makeText(context, "Server URL updated!", Toast.LENGTH_SHORT).show()
                     }) {
                         Text("Save")

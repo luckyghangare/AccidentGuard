@@ -11,7 +11,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.accidentguard.data.model.EmergencyAlert
+import com.accidentguard.data.model.HospitalStats
 import com.accidentguard.ui.navigation.Screen
 import com.accidentguard.ui.theme.*
 import com.accidentguard.viewmodel.HospitalUiState
@@ -43,6 +53,9 @@ fun HospitalDashboardScreen(
     var showCustomDispatchDialog by remember { mutableStateOf<EmergencyAlert?>(null) }
     var showFleetManageDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // Loading overlay for critical actions (dispatch/admit)
+    val isActionLoading = uiState is HospitalUiState.ActionLoading
 
     LaunchedEffect(uiState) {
         when (uiState) {
@@ -65,286 +78,121 @@ fun HospitalDashboardScreen(
                     Column {
                         Text(
                             text = viewModel.tokenManager.getUserName().ifBlank { "Hospital Emergency Care" },
-                            fontSize = 17.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "📍 ${viewModel.tokenManager.getHospitalCity()} • Hospital Operations Hub",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.85f)
+                            text = "Hospital Operations Center • ${viewModel.tokenManager.getHospitalCity()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.8f)
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.loadDashboard(isUserInitiated = true) }) {
                         if (uiState is HospitalUiState.Loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.White)
                         }
                     }
                     IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlueDark)
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (uiState is HospitalUiState.Loading) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = SecondaryTeal,
-                    trackColor = PrimaryBlueDark
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+                
+                // Dashboard Summary Header
+                HospitalSummaryBanner(
+                    stats = stats,
+                    onManageFleet = { showFleetManageDialog = true }
                 )
-            }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(BackgroundLight),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // ── Interactive Hospital Ambulance Fleet Status Banner ──
-                item {
-                    val availAmb = stats?.availableAmbulances ?: viewModel.tokenManager.getHospitalAvailableAmbulances()
-                    val totalAmb = stats?.totalAmbulances ?: viewModel.tokenManager.getHospitalTotalAmbulances()
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF004D40))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF00796B)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("🚑", fontSize = 22.sp)
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            "Ambulance Fleet Status",
-                                            color = Color.White.copy(alpha = 0.8f),
-                                            fontSize = 12.sp
-                                        )
-                                        Text(
-                                            "$availAmb / $totalAmb Units Ready",
-                                            color = Color.White,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                Button(
-                                    onClick = { showFleetManageDialog = true },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B)),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Manage Fleet", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Divider(color = Color.White.copy(alpha = 0.15f))
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Quick Fleet Adjuster Controls
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    "Quick Ready Units Adjuster:",
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    // Decrement button
-                                    FilledIconButton(
-                                        onClick = { viewModel.adjustAvailableFleet(-1) },
-                                        enabled = availAmb > 0,
-                                        modifier = Modifier.size(32.dp),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = Color(0xFF00796B),
-                                            contentColor = Color.White,
-                                            disabledContainerColor = Color.White.copy(alpha = 0.1f)
-                                        )
-                                    ) {
-                                        Text("-", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    Text(
-                                        text = "$availAmb Ready",
-                                        color = Color(0xFF64FFDA),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    // Increment button
-                                    FilledIconButton(
-                                        onClick = { viewModel.adjustAvailableFleet(1) },
-                                        enabled = availAmb < totalAmb,
-                                        modifier = Modifier.size(32.dp),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = Color(0xFF00796B),
-                                            contentColor = Color.White,
-                                            disabledContainerColor = Color.White.copy(alpha = 0.1f)
-                                        )
-                                    ) {
-                                        Text("+", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── KPI Statistics Cards ──
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        StatBox(
-                            title = "Pending",
-                            count = stats?.pendingEmergencies?.toString() ?: "0",
-                            color = DangerRed,
-                            icon = "🚨",
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatBox(
-                            title = "Dispatched",
-                            count = stats?.activeDispatches?.toString() ?: "0",
-                            color = WarningOrange,
-                            icon = "🚑",
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatBox(
-                            title = "Admitted",
-                            count = stats?.admittedPatients?.toString() ?: "0",
-                            color = SafeGreen,
-                            icon = "✅",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // ── Section Title ──
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
                         Text(
-                            "🚨 Emergency Crash Incidents",
-                            fontSize = 17.sp,
+                            text = "Active Emergency Incidents",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
-                        Text(
-                            "${alerts.size} incidents",
-                            fontSize = 13.sp,
-                            color = TextSecondary
-                        )
                     }
-                }
 
-                // ── Emergency Alerts List ──
-                if (alerts.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceCard)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("🛡️", fontSize = 42.sp)
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    "No Active Emergency Alerts",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = TextPrimary
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    "When a vehicle crash is detected, real-time victim details and GPS location will appear here instantly.",
-                                    fontSize = 12.sp,
-                                    color = TextSecondary,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
+                    if (alerts.isEmpty() && uiState !is HospitalUiState.Loading) {
+                        item { EmptyIncidentsState() }
+                    } else {
+                        items(alerts, key = { it.id }) { alert ->
+                            HospitalAlertCard(
+                                alert = alert,
+                                onCallVictim = { phone ->
+                                    if (phone.isNotBlank() && phone != "N/A") {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Cannot open dialer", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Victim phone number unavailable", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onOpenMap = { lat, lng ->
+                                    if (lat != 0.0 && lng != 0.0) {
+                                        try {
+                                            val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(Accident+Location)")
+                                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Cannot open maps app", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Accident location unknown", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onDirectDispatch = { viewModel.directDispatchAmbulance(alert.id) },
+                                onCustomDispatch = { showCustomDispatchDialog = alert },
+                                onAdmit = { viewModel.admitPatient(alert.id) }
+                            )
                         }
-                    }
-                } else {
-                    items(alerts, key = { it.id }) { alert ->
-                        HospitalAlertCard(
-                            alert = alert,
-                            onCallVictim = { phone ->
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-                                context.startActivity(intent)
-                            },
-                            onOpenMap = { lat, lng ->
-                                val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(Crash+Location)")
-                                val intent = Intent(Intent.ACTION_VIEW, uri)
-                                context.startActivity(intent)
-                            },
-                            onDirectDispatch = {
-                                viewModel.directDispatchAmbulance(alert.id)
-                            },
-                            onCustomDispatch = {
-                                showCustomDispatchDialog = alert
-                            },
-                            onAdmit = {
-                                viewModel.admitPatient(alert.id)
-                            }
-                        )
                     }
                 }
             }
 
-            // ── Custom Dispatch Ambulance Dialog (Optional Details) ──
+            // Action Loading Overlay
+            if (isActionLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(12.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = PrimaryBlue, strokeWidth = 4.dp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Processing Action...", fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Updating operations center...", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                    }
+                }
+            }
+
+            // ── Custom Dispatch Ambulance Dialog ──
             showCustomDispatchDialog?.let { alert ->
                 CustomDispatchAmbulanceDialog(
                     alert = alert,
@@ -365,67 +213,12 @@ fun HospitalDashboardScreen(
 
             // ── Fleet Management Dialog ──
             if (showFleetManageDialog) {
-                val currentTotal = stats?.totalAmbulances ?: viewModel.tokenManager.getHospitalTotalAmbulances()
-                val currentAvail = stats?.availableAmbulances ?: viewModel.tokenManager.getHospitalAvailableAmbulances()
-                var editTotal by remember { mutableStateOf(currentTotal.toString()) }
-                var editAvail by remember { mutableStateOf(currentAvail.toString()) }
-
-                AlertDialog(
-                    onDismissRequest = { showFleetManageDialog = false },
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🚑", fontSize = 22.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Update Ambulance Fleet", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        }
-                    },
-                    text = {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                "Configure your hospital's total ambulance units and ready units count:",
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-
-                            OutlinedTextField(
-                                value = editTotal,
-                                onValueChange = { editTotal = it },
-                                label = { Text("Total Ambulance Fleet Count") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = editAvail,
-                                onValueChange = { editAvail = it },
-                                label = { Text("Available / Ready Units Now") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                val t = editTotal.toIntOrNull() ?: currentTotal
-                                val a = editAvail.toIntOrNull() ?: currentAvail
-                                viewModel.updateFleet(total = t, available = a)
-                                showFleetManageDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B))
-                        ) {
-                            Text("Save Fleet Status")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showFleetManageDialog = false }) {
-                            Text("Cancel")
-                        }
+                FleetManageDialog(
+                    stats = stats,
+                    onDismiss = { showFleetManageDialog = false },
+                    onUpdate = { total, avail ->
+                        viewModel.updateFleet(total = total, available = avail)
+                        showFleetManageDialog = false
                     }
                 )
             }
@@ -434,8 +227,8 @@ fun HospitalDashboardScreen(
             if (showLogoutDialog) {
                 AlertDialog(
                     onDismissRequest = { showLogoutDialog = false },
-                    title = { Text("Logout Hospital Unit") },
-                    text = { Text("Are you sure you want to disconnect this hospital session?") },
+                    title = { Text("Operations Logout") },
+                    text = { Text("Are you sure you want to disconnect this hospital session? You will stop receiving live alerts.") },
                     confirmButton = {
                         Button(
                             onClick = {
@@ -447,12 +240,12 @@ fun HospitalDashboardScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                         ) {
-                            Text("Logout")
+                            Text("Disconnect")
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showLogoutDialog = false }) {
-                            Text("Cancel")
+                            Text("Stay Connected")
                         }
                     }
                 )
@@ -462,33 +255,113 @@ fun HospitalDashboardScreen(
 }
 
 @Composable
-private fun StatBox(
-    title: String,
-    count: String,
-    color: Color,
-    icon: String,
-    modifier: Modifier = Modifier
+fun HospitalSummaryBanner(
+    stats: HospitalStats?,
+    onManageFleet: () -> Unit
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        elevation = CardDefaults.cardElevation(2.dp)
+    Surface(
+        color = Color.White,
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(icon, fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(title, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "FLEET STATUS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "${stats?.availableAmbulances ?: 0} / ${stats?.totalAmbulances ?: 0} Units Ready",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryBlue
+                    )
+                }
+                IconButton(
+                    onClick = onManageFleet,
+                    modifier = Modifier.background(PrimaryBlue.copy(alpha = 0.1f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Manage Fleet", tint = PrimaryBlue)
+                }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(count, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color)
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SummaryChip(
+                    label = "Pending", 
+                    count = stats?.pendingEmergencies ?: 0, 
+                    color = DangerRed,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryChip(
+                    label = "En Route", 
+                    count = stats?.activeDispatches ?: 0, 
+                    color = WarningOrange,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryChip(
+                    label = "Admitted", 
+                    count = stats?.admittedPatients ?: 0, 
+                    color = SafeGreen,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun SummaryChip(label: String, count: Int, color: Color, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.1f),
+        modifier = modifier.height(36.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "$count $label", 
+                color = color, 
+                style = MaterialTheme.typography.labelSmall, 
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyIncidentsState() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(SafeGreen.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(48.dp))
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Text("No Active Incidents", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("System status: Standby. All calls handled.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
     }
 }
 
@@ -505,7 +378,7 @@ private fun HospitalAlertCard(
     val isDispatched = alert.status.equals("DISPATCHED", ignoreCase = true)
     val isAdmitted = alert.status.equals("ADMITTED", ignoreCase = true)
 
-    val borderColor = when {
+    val statusColor = when {
         isPending -> DangerRed
         isDispatched -> WarningOrange
         else -> SafeGreen
@@ -515,10 +388,10 @@ private fun HospitalAlertCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        elevation = CardDefaults.cardElevation(3.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row: Status Badge & Severity
+            // Header: Status & Impact
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -526,19 +399,15 @@ private fun HospitalAlertCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = when {
-                        isPending -> DangerRedBg
-                        isDispatched -> Color(0xFFFFF3E0)
-                        else -> Color(0xFFE8F5E9)
-                    }
+                    color = statusColor.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = when {
                             isPending -> "🚨 PENDING DISPATCH"
-                            isDispatched -> "🚑 AMBULANCE ON WAY"
+                            isDispatched -> "🚑 AMBULANCE EN ROUTE"
                             else -> "✅ PATIENT ADMITTED"
                         },
-                        color = borderColor,
+                        color = statusColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -559,181 +428,158 @@ private fun HospitalAlertCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Severity description
             Text(
                 text = alert.damageSeverity,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = DangerRed
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isPending) DangerRed else TextPrimary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-            Divider(color = DividerGrey)
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = DividerGrey.copy(alpha = 0.5f))
 
-            // Driver & Vehicle Details
+            // Victim & Vehicle Details
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("👤 DRIVER / VICTIM", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
+                    Text("👤 VICTIM INFO", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
                     Text(alert.victim.userName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Text(alert.victim.userPhone, fontSize = 12.sp, color = PrimaryBlue)
+                    Text(alert.victim.userPhone, fontSize = 12.sp, color = PrimaryBlue, modifier = Modifier.clickable { onCallVictim(alert.victim.userPhone) })
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("🚗 VEHICLE DETAILS", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
+                    Text("🚗 VEHICLE", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Bold)
                     Text(alert.victim.vehicleName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     Text(alert.victim.vehicleNumber, fontSize = 12.sp, color = TextSecondary)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Incident Time and Location
+            // Time and Coordinates
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = TextSecondary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    "🕒 ${alert.dateStr}, ${alert.timeStr}",
+                    text = "${alert.dateStr}, ${alert.timeStr}",
                     fontSize = 11.sp,
                     color = TextSecondary
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = TextSecondary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    "📍 (${String.format("%.4f", alert.latitude)}, ${String.format("%.4f", alert.longitude)})",
+                    text = "${String.format("%.4f", alert.latitude)}, ${String.format("%.4f", alert.longitude)}",
                     fontSize = 11.sp,
                     color = TextSecondary
                 )
             }
 
-            // Dispatched ambulance info if already dispatched
+            // Dispatched ambulance info
             if (isDispatched && !alert.ambulanceNumber.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFFFF8E1),
+                    shape = RoundedCornerShape(12.dp),
+                    color = WarningOrange.copy(alpha = 0.1f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("🚑", fontSize = 18.sp)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("🚑", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                "Ambulance: ${alert.ambulanceNumber} • ETA: ${alert.etaMinutes ?: 8} mins",
+                                "Unit: ${alert.ambulanceNumber} • ETA: ${alert.etaMinutes ?: 8}m",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = Color(0xFFE65100)
+                                fontSize = 13.sp,
+                                color = WarningOrange
                             )
                             Text(
-                                "Driver: ${alert.driverName ?: "Emergency Response Unit"} (${alert.driverPhone ?: "108"})",
+                                "Driver: ${alert.driverName ?: "Emergency Unit"} (${alert.driverPhone ?: "108"})",
                                 fontSize = 11.sp,
-                                color = Color(0xFFBF360C)
+                                color = WarningOrange.copy(alpha = 0.8f)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Action Buttons (Call & Map)
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Call Button
                 OutlinedButton(
                     onClick = { onCallVictim(alert.victim.userPhone) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Call Victim", fontSize = 12.sp)
                 }
 
-                // Map Button
                 OutlinedButton(
                     onClick = { onOpenMap(alert.latitude, alert.longitude) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("View Map", fontSize = 12.sp)
+                    Text("Live Map", fontSize = 12.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // ── PRIMARY ACTION BUTTONS ──
-            if (isPending) {
-                // DIRECT DISPATCH BUTTON (Single Tap, No form required)
-                Button(
-                    onClick = onDirectDispatch,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
-                ) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("⚡ DIRECT DISPATCH AMBULANCE", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Optional Custom Dispatch link
-                Text(
-                    text = "⚙️ Custom Dispatch Details (Optional)",
-                    fontSize = 11.sp,
-                    color = PrimaryBlue,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .clickable { onCustomDispatch() }
-                        .padding(vertical = 4.dp)
-                )
-            } else if (isDispatched) {
-                // DIRECT MARK PATIENT ADMITTED BUTTON (Single Tap)
-                Button(
-                    onClick = onAdmit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("✅ MARK PATIENT ADMITTED / TREATED", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            } else if (isAdmitted) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFE8F5E9),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+            if (isPending || isDispatched) {
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                if (isPending) {
+                    Button(
+                        onClick = onDirectDispatch,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Patient Admitted • Ambulance Returned to Fleet",
-                            color = SafeGreen,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DIRECT DISPATCH NOW", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    TextButton(
+                        onClick = onCustomDispatch,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("Assign Specific Unit (Advanced)", fontSize = 12.sp, color = PrimaryBlue)
+                    }
+                } else {
+                    Button(
+                        onClick = onAdmit,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
+                    ) {
+                        Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("MARK PATIENT ADMITTED", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -757,39 +603,26 @@ private fun CustomDispatchAmbulanceDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🚑", fontSize = 22.sp)
+                Icon(Icons.Default.LocalShipping, contentDescription = null, tint = DangerRed)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Custom Ambulance Dispatch", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Custom Unit Dispatch", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
         },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Assign custom unit for victim: ${alert.victim.userName} (${alert.victim.vehicleNumber})",
+                    "Assigning for victim: ${alert.victim.userName}",
                     fontSize = 12.sp,
                     color = TextSecondary
-                )
-
-                val dialogFieldColors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color(0xFF1A1A1A),
-                    unfocusedTextColor = Color(0xFF1A1A1A),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = DangerRed,
-                    unfocusedBorderColor = Color(0xFFBDBDBD),
-                    focusedLabelColor = DangerRed,
-                    unfocusedLabelColor = Color(0xFF555555)
                 )
 
                 OutlinedTextField(
                     value = ambulanceNo,
                     onValueChange = { ambulanceNo = it },
-                    label = { Text("Ambulance Vehicle Number") },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
-                    colors = dialogFieldColors,
+                    label = { Text("Ambulance Number") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -797,9 +630,7 @@ private fun CustomDispatchAmbulanceDialog(
                 OutlinedTextField(
                     value = driverName,
                     onValueChange = { driverName = it },
-                    label = { Text("Driver / Paramedic Name") },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
-                    colors = dialogFieldColors,
+                    label = { Text("Driver Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -807,9 +638,7 @@ private fun CustomDispatchAmbulanceDialog(
                 OutlinedTextField(
                     value = driverPhone,
                     onValueChange = { driverPhone = it },
-                    label = { Text("Driver Contact Number") },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
-                    colors = dialogFieldColors,
+                    label = { Text("Driver Contact") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -817,9 +646,7 @@ private fun CustomDispatchAmbulanceDialog(
                 OutlinedTextField(
                     value = etaMinutes,
                     onValueChange = { etaMinutes = it },
-                    label = { Text("Estimated Arrival Time (ETA mins)") },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
-                    colors = dialogFieldColors,
+                    label = { Text("ETA (Minutes)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -827,9 +654,7 @@ private fun CustomDispatchAmbulanceDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Dispatch Notes / Instructions") },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1A1A1A), fontSize = 14.sp),
-                    colors = dialogFieldColors,
+                    label = { Text("Notes") },
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -844,6 +669,72 @@ private fun CustomDispatchAmbulanceDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
             ) {
                 Text("Confirm Dispatch")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun FleetManageDialog(
+    stats: HospitalStats?,
+    onDismiss: () -> Unit,
+    onUpdate: (Int, Int) -> Unit
+) {
+    var editTotal by remember { mutableStateOf(stats?.totalAmbulances?.toString() ?: "5") }
+    var editAvail by remember { mutableStateOf(stats?.availableAmbulances?.toString() ?: "5") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = PrimaryBlue)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Update Fleet Status", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Update your hospital's total and currently ready ambulance units.",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+
+                OutlinedTextField(
+                    value = editTotal,
+                    onValueChange = { editTotal = it },
+                    label = { Text("Total Fleet Count") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = editAvail,
+                    onValueChange = { editAvail = it },
+                    label = { Text("Available Units Now") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val t = editTotal.toIntOrNull() ?: stats?.totalAmbulances ?: 5
+                    val a = editAvail.toIntOrNull() ?: stats?.availableAmbulances ?: 5
+                    onUpdate(t, a)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+            ) {
+                Text("Update Fleet")
             }
         },
         dismissButton = {

@@ -39,13 +39,13 @@ fun SecuritySettingsScreen(
 ) {
     val context = LocalContext.current
     val biometricHelper = remember { BiometricHelper(context) }
-    
+
     var is2FAEnabled by remember { mutableStateOf(tokenManager.is2FAEnabled()) }
     var isBiometricEnabled by remember { mutableStateOf(tokenManager.isBiometricEnabled()) }
-    
+
     val lastLogin = remember {
         val timestamp = tokenManager.getLastLoginTime()
-        if (timestamp == 0L) "Unknown" 
+        if (timestamp == 0L) "Unknown"
         else SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(timestamp))
     }
 
@@ -108,9 +108,9 @@ fun SecuritySettingsScreen(
                     tokenManager.set2FAEnabled(enabled)
                     Toast.makeText(context, "2FA ${if (enabled) "Enabled" else "Disabled"}", Toast.LENGTH_SHORT).show()
                 }
-                
+
                 HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
-                
+
                 SettingsToggleRow(
                     icon = Icons.Default.Fingerprint,
                     title = "Fingerprint Login",
@@ -159,7 +159,7 @@ fun SecuritySettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // ── Recovery ──
             SettingsSectionHeader("Recovery")
             SettingsCard {

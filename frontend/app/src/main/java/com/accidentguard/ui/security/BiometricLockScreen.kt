@@ -40,7 +40,7 @@ fun BiometricLockScreen(
                 title = "App Locked",
                 subtitle = "Verify identity to continue",
                 onSuccess = { onSuccess() },
-                onError = { _, err -> 
+                onError = { _, err ->
                     Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
                 },
                 onFailed = { }
@@ -111,7 +111,7 @@ fun BiometricLockScreen(
                     modifier = Modifier.size(40.dp)
                 )
             }
-            
+
             Text(
                 text = "Tap to unlock",
                 color = Color.White.copy(alpha = 0.5f),

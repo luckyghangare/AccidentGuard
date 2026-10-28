@@ -43,10 +43,10 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val notificationHelper = remember { NotificationHelper(context) }
-    
+
     var userName by remember { mutableStateOf(tokenManager.getUserName()) }
     var userEmail by remember { mutableStateOf(tokenManager.getUserEmail()) }
-    
+
     var pushEnabled by remember { mutableStateOf(true) }
     var crashAlerts by remember { mutableStateOf(true) }
 
@@ -104,9 +104,9 @@ fun SettingsScreen(
             SettingsSectionHeader("Security & Privacy")
             SettingsCard {
                 SettingsRow(
-                    icon = Icons.Default.Security, 
-                    title = "Security Dashboard", 
-                    subtitle = "2FA, Biometrics, and Privacy", 
+                    icon = Icons.Default.Security,
+                    title = "Security Dashboard",
+                    subtitle = "2FA, Biometrics, and Privacy",
                     iconTint = SafeGreen
                 ) {
                     navController.navigate(Screen.SecuritySettings.route)
@@ -124,7 +124,7 @@ fun SettingsScreen(
                     subtitle = "Receive real-time app updates",
                     iconTint = PrimaryBlue,
                     checked = pushEnabled
-                ) { 
+                ) {
                     pushEnabled = it
                     if (it && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -139,7 +139,7 @@ fun SettingsScreen(
                     checked = crashAlerts
                 ) { crashAlerts = it }
                 HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
-                
+
                 // TEST NOTIFICATION BUTTON
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.Send,
@@ -148,7 +148,7 @@ fun SettingsScreen(
                     iconTint = PrimaryBlue
                 ) {
                     notificationHelper.showNotification(
-                        "Accident Guard", 
+                        "Accident Guard",
                         "Hello $userName! This is a test notification from your safety system."
                     )
                 }
@@ -172,7 +172,7 @@ fun SettingsScreen(
             Card(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-                modifier = Modifier.fillMaxWidth().clickable { 
+                modifier = Modifier.fillMaxWidth().clickable {
                     tokenManager.clear()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
                 }
@@ -183,7 +183,7 @@ fun SettingsScreen(
                     Text("Logout from Device", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DangerRed)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

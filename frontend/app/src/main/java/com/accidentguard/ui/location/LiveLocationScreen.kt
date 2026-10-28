@@ -37,7 +37,7 @@ fun LiveLocationScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
-    
+
     val currentPos = LatLng(state.latitude, state.longitude)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(currentPos, 15f)
@@ -115,9 +115,9 @@ fun LiveLocationScreen(
                             Text("${state.accuracy.toInt()} m", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue)
                         }
                     }
-                    
+
                     Divider(modifier = Modifier.padding(vertical = 12.dp), color = DividerGrey)
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,7 +128,7 @@ fun LiveLocationScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Updated: ${state.lastUpdatedText}", fontSize = 12.sp, color = TextSecondary)
                         }
-                        
+
                         Button(
                             onClick = { if (state.isTrackingActive) viewModel.stopTracking() else viewModel.startTracking() },
                             colors = ButtonDefaults.buttonColors(

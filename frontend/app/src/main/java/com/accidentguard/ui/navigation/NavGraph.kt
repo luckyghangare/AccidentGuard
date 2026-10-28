@@ -56,7 +56,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
     val hasToken = tokenManager.isLoggedIn()
     val isHospital = tokenManager.isHospital()
     val isBiometricEnabled = tokenManager.isBiometricEnabled()
-    
+
     // Local state to track if app is unlocked via biometric during this session
     var isAppUnlocked by remember { mutableStateOf(!isBiometricEnabled) }
 
@@ -105,7 +105,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
                     if (isBiometricEnabled) Screen.BiometricLock.route
                     else if (!locationState.hasPermission) Screen.PermissionRequired.route
                     else if (!locationState.isGpsEnabled) Screen.GpsRequired.route
-                    else if (tokenManager.isHospital()) Screen.HospitalDashboard.route 
+                    else if (tokenManager.isHospital()) Screen.HospitalDashboard.route
                     else Screen.Dashboard.route
                 } else {
                     Screen.Login.route
@@ -188,7 +188,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
         composable(Screen.HospitalDashboard.route) { HospitalDashboardScreen(navController, viewModel()) }
         composable(Screen.LiveLocation.route) { LiveLocationScreen(navController, viewModel()) }
         composable(Screen.SecuritySettings.route) { SecuritySettingsScreen(navController, tokenManager) }
-        
+
         // Preserve other routes
         composable(Screen.Register.route) { RegisterScreen(viewModel(), {}, { navController.popBackStack() }) }
         composable(Screen.Settings.route) { SettingsScreen(navController, tokenManager, viewModel()) }

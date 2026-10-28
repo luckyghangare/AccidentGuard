@@ -27,7 +27,7 @@ class TokenManager(context: Context) {
         private const val KEY_DARK_MODE = "dark_mode"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_SERVER_URL = "server_url"
-        
+
         // Security Settings
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_2FA_ENABLED = "two_fa_enabled"
@@ -115,6 +115,13 @@ class TokenManager(context: Context) {
     fun getHospitalTotalAmbulances(): Int = prefs.getInt(KEY_HOSPITAL_TOTAL_AMB, 5)
 
     fun getHospitalAvailableAmbulances(): Int = prefs.getInt(KEY_HOSPITAL_AVAIL_AMB, 5)
+
+    fun saveHospitalFleet(total: Int, available: Int) {
+        prefs.edit()
+            .putInt(KEY_HOSPITAL_TOTAL_AMB, total)
+            .putInt(KEY_HOSPITAL_AVAIL_AMB, available)
+            .apply()
+    }
 
     fun updateUserProfile(name: String, phone: String) {
         prefs.edit()

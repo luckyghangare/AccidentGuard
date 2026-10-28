@@ -88,7 +88,7 @@ fun SplashScreen(
                 letterSpacing = 2.sp
             )
         }
-        
+
         CircularProgressIndicator(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

@@ -49,7 +49,7 @@ class CrashViewModel(application: Application) : AndroidViewModel(application) {
 
         // HIGH PRIORITY NOTIFICATION
         notificationHelper.showNotification(
-            "⚠️ CRASH DETECTED!", 
+            "⚠️ CRASH DETECTED!",
             "Impact detected on Car 01. Emergency alert will be sent in 10 seconds.",
             isCritical = true
         )
@@ -70,7 +70,7 @@ class CrashViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 // FINAL ALERT NOTIFICATION
                 notificationHelper.showNotification(
-                    "🚨 SOS SENT", 
+                    "🚨 SOS SENT",
                     "Emergency services and contacts have been notified of your location.",
                     isCritical = true
                 )

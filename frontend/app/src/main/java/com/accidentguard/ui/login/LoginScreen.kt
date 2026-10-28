@@ -42,7 +42,7 @@ fun LoginScreen(
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
     val biometricHelper = remember { BiometricHelper(context) }
-    
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var serverUrlInput by remember { mutableStateOf(tokenManager.getServerUrl()) }
