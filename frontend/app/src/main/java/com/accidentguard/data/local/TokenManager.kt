@@ -95,6 +95,13 @@ class TokenManager(context: Context) {
 
     fun getHospitalAvailableAmbulances(): Int = prefs.getInt(KEY_HOSPITAL_AVAIL_AMB, 5)
 
+    fun saveHospitalFleet(total: Int, available: Int) {
+        prefs.edit()
+            .putInt(KEY_HOSPITAL_TOTAL_AMB, total)
+            .putInt(KEY_HOSPITAL_AVAIL_AMB, available)
+            .apply()
+    }
+
     fun updateUserProfile(name: String, phone: String) {
         prefs.edit()
             .putString(KEY_USER_NAME, name)
