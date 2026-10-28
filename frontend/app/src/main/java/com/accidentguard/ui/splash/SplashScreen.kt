@@ -1,6 +1,7 @@
 package com.accidentguard.ui.splash
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,94 +11,91 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.accidentguard.ui.theme.PrimaryBlue
+import com.accidentguard.ui.theme.*
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
     onSplashFinished: () -> Unit
 ) {
+    var startAnimation by remember { mutableStateOf(false) }
+    val alphaAnim = animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0f,
+        animationSpec = tween(durationMillis = 1000),
+        label = "Alpha"
+    )
+    val scaleAnim = animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0.8f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "Scale"
+    )
+
     LaunchedEffect(Unit) {
-        delay(2000)
+        startAnimation = true
+        delay(2500)
         onSplashFinished()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(DarkNavyBlue),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.alpha(alphaAnim.value).scale(scaleAnim.value)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .background(PrimaryBlue.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+            Surface(
+                modifier = Modifier.size(100.dp),
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.15f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = "Shield Logo",
-                    tint = PrimaryBlue,
-                    modifier = Modifier.size(64.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Logo",
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "AccidentGuard",
+                text = "Accident Guard",
                 fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryBlue
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Accident Avoidance System",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Crash Detection & GPS Notification",
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            LinearProgressIndicator(
-                color = PrimaryBlue,
-                trackColor = PrimaryBlue.copy(alpha = 0.2f),
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(4.dp)
+                text = "SMART SECURITY SYSTEM",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.7f),
+                letterSpacing = 2.sp
             )
         }
-
-        Text(
-            text = "Vehicle Safety & Emergency Response",
-            fontSize = 12.sp,
-            color = Color.Gray,
+        
+        CircularProgressIndicator(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+                .padding(bottom = 64.dp)
+                .size(32.dp),
+            color = PrimaryBlue,
+            strokeWidth = 3.dp
         )
     }
 }
