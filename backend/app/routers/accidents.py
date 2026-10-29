@@ -42,11 +42,15 @@ def get_user_accident(
 @router.post("/report")
 def record_accident(
         accident_in: AccidentCreate,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
 ):
     vehicle = (
         db.query(Vehicle)
-        .filter(Vehicle.id == accident_in.vehicle_id)
+        .filter(
+            Vehicle.id == accident_in.vehicle_id,
+            Vehicle.user_id == current_user.id,
+        )
         .first()
     )
 
@@ -132,15 +136,41 @@ def record_accident(
         db.commit()
         db.refresh(accident)
 
-        # Trigger Push Notification to the vehicle owner
-        owner = db.query(User).filter(User.id == vehicle.user_id).first()
-        if owner and owner.fcm_token:
+        # Send accident notifications
+        owner = current_user
+        victim_name = owner.full_name
+
+        # 1. Notify the owner/victim themselves
+        if owner.fcm_token:
             NotificationService.send_accident_alert(
                 db=db,
                 token=owner.fcm_token,
                 accident_id=accident.id,
-                location_text=f"{accident.latitude}, {accident.longitude}"
+                location_text=f"{accident.latitude}, {accident.longitude}",
+                victim_name="You"
             )
+
+        # 2. Notify all ACCEPTED emergency contacts who are registered users
+        accepted_contacts = (
+            db.query(EmergencyContact)
+            .filter(
+                EmergencyContact.user_id == owner.id,
+                EmergencyContact.status == "ACCEPTED",
+                EmergencyContact.contact_user_id.isnot(None)
+            )
+            .all()
+        )
+
+        for contact in accepted_contacts:
+            contact_user = db.query(User).filter(User.id == contact.contact_user_id).first()
+            if contact_user and contact_user.fcm_token:
+                NotificationService.send_accident_alert(
+                    db=db,
+                    token=contact_user.fcm_token,
+                    accident_id=accident.id,
+                    location_text=f"{accident.latitude}, {accident.longitude}",
+                    victim_name=victim_name
+                )
 
     except Exception:
         db.rollback()
@@ -255,15 +285,41 @@ def cancel_accident_alert(
         db.commit()
         db.refresh(accident)
 
-        # Trigger Push Notification to the vehicle owner
-        owner = db.query(User).filter(User.id == vehicle.user_id).first()
-        if owner and owner.fcm_token:
+        # Send accident notifications
+        owner = current_user
+        victim_name = owner.full_name
+
+        # 1. Notify the owner/victim themselves
+        if owner.fcm_token:
             NotificationService.send_accident_alert(
                 db=db,
                 token=owner.fcm_token,
                 accident_id=accident.id,
-                location_text=f"{accident.latitude}, {accident.longitude}"
+                location_text=f"{accident.latitude}, {accident.longitude}",
+                victim_name="You"
             )
+
+        # 2. Notify all ACCEPTED emergency contacts who are registered users
+        accepted_contacts = (
+            db.query(EmergencyContact)
+            .filter(
+                EmergencyContact.user_id == owner.id,
+                EmergencyContact.status == "ACCEPTED",
+                EmergencyContact.contact_user_id.isnot(None)
+            )
+            .all()
+        )
+
+        for contact in accepted_contacts:
+            contact_user = db.query(User).filter(User.id == contact.contact_user_id).first()
+            if contact_user and contact_user.fcm_token:
+                NotificationService.send_accident_alert(
+                    db=db,
+                    token=contact_user.fcm_token,
+                    accident_id=accident.id,
+                    location_text=f"{accident.latitude}, {accident.longitude}",
+                    victim_name=victim_name
+                )
 
     except Exception:
         db.rollback()

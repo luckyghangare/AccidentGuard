@@ -64,8 +64,21 @@ class AccidentGuardMessagingService : FirebaseMessagingService() {
         // If notification payload is present, Firebase displays it automatically in background.
         // In foreground, we handle it here.
         remoteMessage.notification?.let {
-            sendNotification(it.title ?: "AccidentGuard Alert", it.body ?: "")
-            return // Avoid processing data payload as a second notification
+            val title = it.title ?: "AccidentGuard Alert"
+            val body = it.body ?: ""
+
+            // Check if we have structured data to enhance the body
+            val victimName = remoteMessage.data["victim_name"]
+            val location = remoteMessage.data["location"]
+
+            val finalBody = if (victimName != null && location != null && !body.contains(victimName)) {
+                "EMERGENCY: $victimName may have been in an accident near $location."
+            } else {
+                body
+            }
+
+            sendNotification(title, finalBody)
+            return
         }
 
         // If only data payload is present (or if we want custom handling)
@@ -80,7 +93,7 @@ class AccidentGuardMessagingService : FirebaseMessagingService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
-        
+
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT

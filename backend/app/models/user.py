@@ -18,4 +18,9 @@ class User(Base):
 
     # Relationships
     vehicles = relationship("Vehicle", back_populates="owner", cascade="all, delete-orphan")
-    emergency_contacts = relationship("EmergencyContact", back_populates="user", cascade="all, delete-orphan")
+    emergency_contacts = relationship(
+        "EmergencyContact",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        primaryjoin="User.id == EmergencyContact.user_id"
+    )

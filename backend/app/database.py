@@ -9,16 +9,22 @@ from app.config import settings
 
 ssl_ca_path = Path(settings.DATABASE_SSL_CA_PATH)
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+    "echo": settings.DEBUG,
+}
+
+if "sqlite" not in settings.DATABASE_URL:
+    engine_kwargs["connect_args"] = {
         "ssl": {
             "ca": str(ssl_ca_path),
         }
-    },
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    echo=settings.DEBUG,
+    }
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    **engine_kwargs
 )
 
 SessionLocal = sessionmaker(

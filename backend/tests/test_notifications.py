@@ -4,6 +4,7 @@ from app.main import app
 from app.services.notification_service import NotificationService
 from app.database import SessionLocal
 from app.models.user import User
+from app.models.vehicle import Vehicle
 from firebase_admin import messaging
 import pytest
 
@@ -12,13 +13,13 @@ client = TestClient(app)
 def test_send_fcm_notification_success():
     with patch("firebase_admin.messaging.send") as mock_send:
         mock_send.return_value = "projects/my-project/messages/123"
-        
+
         result = NotificationService.send_fcm_notification(
             token="test-token",
             title="Test Title",
             body="Test Body"
         )
-        
+
         assert result is True
         mock_send.assert_called_once()
         # Verify message construction
@@ -36,17 +37,17 @@ def test_send_fcm_notification_unregistered():
     if test_user:
         test_user.fcm_token = "stale-token"
         db.commit()
-    
+
     with patch("firebase_admin.messaging.send") as mock_send:
         mock_send.side_effect = messaging.UnregisteredError("Token unregistered")
-        
+
         result = NotificationService.send_fcm_notification(
             token="stale-token",
             title="Test Title",
             body="Test Body",
             db=db
         )
-        
+
         assert result is False
         # The token should be cleared in the DB
         db.refresh(test_user)
@@ -61,24 +62,36 @@ def test_accident_report_triggers_notification():
     res_login = client.post("/api/auth/login", json=login_payload)
     token = res_login.json()["data"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # 2. Update FCM token for the user
     client.post("/api/auth/fcm-token", json={"fcm_token": "valid-device-token"}, headers=headers)
-    
+
+    # NEW: Get a valid vehicle ID for this user
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == "demo@accidentguard.com").first()
+    vehicle = db.query(Vehicle).filter(Vehicle.user_id == user.id).first()
+    if not vehicle:
+        vehicle = Vehicle(user_id=user.id, name="Test Car", vehicle_number="TEST-123")
+        db.add(vehicle)
+        db.commit()
+        db.refresh(vehicle)
+    vehicle_id = vehicle.id
+    db.close()
+
     # 3. Report accident and check if notification was sent
     with patch("firebase_admin.messaging.send") as mock_send:
         mock_send.return_value = "msg-id"
-        
+
         accident_payload = {
-            "vehicle_id": 4,  # Use actual vehicle ID found in DB for demo user
+            "vehicle_id": vehicle_id,
             "latitude": 12.34,
             "longitude": 56.78,
             "impact_g": 9.5
         }
-        
-        response = client.post("/api/accidents/report", json=accident_payload)
+
+        response = client.post("/api/accidents/report", json=accident_payload, headers=headers)
         assert response.status_code == 201
-        
+
         # Verify notification was triggered
         mock_send.assert_called_once()
         args, kwargs = mock_send.call_args

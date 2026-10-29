@@ -76,6 +76,29 @@ interface ApiService {
         @Path("id") contactId: Long
     ): Response<ApiResponse<Unit>>
 
+    @GET("api/contacts/invitations/received")
+    suspend fun getReceivedInvitations(
+        @Header("Authorization") authHeader: String
+    ): Response<ApiResponse<List<EmergencyContact>>>
+
+    @POST("api/contacts/invitations/{id}/accept")
+    suspend fun acceptInvitation(
+        @Header("Authorization") authHeader: String,
+        @Path("id") invitationId: Long
+    ): Response<ApiResponse<EmergencyContact>>
+
+    @POST("api/contacts/invitations/{id}/reject")
+    suspend fun rejectInvitation(
+        @Header("Authorization") authHeader: String,
+        @Path("id") invitationId: Long
+    ): Response<ApiResponse<Unit>>
+
+    @POST("api/contacts/invitations/{id}/cancel")
+    suspend fun cancelInvitation(
+        @Header("Authorization") authHeader: String,
+        @Path("id") invitationId: Long
+    ): Response<ApiResponse<Unit>>
+
     // Vehicles - Add
     @POST("api/vehicles")
     suspend fun addVehicle(
