@@ -16,6 +16,7 @@ from app.models import (
 from app.schemas.accident import AccidentCreate, AccidentResponse
 from app.utils.response import success_response, error_response
 from app.dependencies import get_current_user
+from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/api/accidents", tags=["Accidents"])
 
@@ -131,6 +132,16 @@ def record_accident(
         db.commit()
         db.refresh(accident)
 
+        # Trigger Push Notification to the vehicle owner
+        owner = db.query(User).filter(User.id == vehicle.user_id).first()
+        if owner and owner.fcm_token:
+            NotificationService.send_accident_alert(
+                db=db,
+                token=owner.fcm_token,
+                accident_id=accident.id,
+                location_text=f"{accident.latitude}, {accident.longitude}"
+            )
+
     except Exception:
         db.rollback()
         raise
@@ -243,6 +254,16 @@ def cancel_accident_alert(
 
         db.commit()
         db.refresh(accident)
+
+        # Trigger Push Notification to the vehicle owner
+        owner = db.query(User).filter(User.id == vehicle.user_id).first()
+        if owner and owner.fcm_token:
+            NotificationService.send_accident_alert(
+                db=db,
+                token=owner.fcm_token,
+                accident_id=accident.id,
+                location_text=f"{accident.latitude}, {accident.longitude}"
+            )
 
     except Exception:
         db.rollback()

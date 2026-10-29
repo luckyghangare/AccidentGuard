@@ -17,9 +17,13 @@ class UserResponse(BaseModel):
     email: str
     phone_number: str
     is_active: bool
+    fcm_token: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class FCMTokenUpdate(BaseModel):
+    fcm_token: str
 
 class TokenResponse(BaseModel):
     access_token: str

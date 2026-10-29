@@ -57,7 +57,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updateContact(contactId: Int, name: String, phone: String, rel: String, isPrimary: Boolean) {
+    fun updateContact(contactId: Long, name: String, phone: String, rel: String, isPrimary: Boolean) {
         val token = tokenManager.getAuthToken() ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -72,7 +72,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteContact(contactId: Int) {
+    fun deleteContact(contactId: Long) {
         val token = tokenManager.getAuthToken() ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)

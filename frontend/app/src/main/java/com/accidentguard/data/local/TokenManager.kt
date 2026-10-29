@@ -51,14 +51,14 @@ class TokenManager(context: Context) {
     }
 
     // Save standard vehicle user session
-    fun saveAuthToken(token: String, userName: String, email: String, phone: String = "", userId: Int = 0) {
+    fun saveAuthToken(token: String, userName: String, email: String, phone: String = "", userId: Long = 0) {
         prefs.edit()
             .putString(KEY_JWT_TOKEN, token)
             .putString(KEY_USER_ROLE, "user")
             .putString(KEY_USER_NAME, userName)
             .putString(KEY_USER_EMAIL, email)
             .putString(KEY_USER_PHONE, phone)
-            .putInt(KEY_USER_ID, userId)
+            .putLong(KEY_USER_ID, userId)
             .putLong(KEY_LAST_LOGIN_TIME, System.currentTimeMillis())
             .apply()
     }
@@ -71,7 +71,7 @@ class TokenManager(context: Context) {
             .putString(KEY_USER_NAME, hospital.name)
             .putString(KEY_USER_EMAIL, hospital.email)
             .putString(KEY_USER_PHONE, hospital.phoneNumber)
-            .putInt(KEY_USER_ID, hospital.id)
+            .putLong(KEY_USER_ID, hospital.id)
             .putString(KEY_HOSPITAL_CITY, hospital.city)
             .putString(KEY_HOSPITAL_ADDRESS, hospital.address)
             .putInt(KEY_HOSPITAL_TOTAL_AMB, hospital.totalAmbulances)
@@ -92,7 +92,7 @@ class TokenManager(context: Context) {
 
     fun getUserPhone(): String = prefs.getString(KEY_USER_PHONE, "") ?: ""
 
-    fun getUserId(): Int = prefs.getInt(KEY_USER_ID, 0)
+    fun getUserId(): Long = prefs.getLong(KEY_USER_ID, 0)
 
     fun getLastLoginTime(): Long = prefs.getLong(KEY_LAST_LOGIN_TIME, 0)
 

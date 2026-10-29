@@ -57,3 +57,22 @@ Thumbs.db
 
 # Database SSL certificate
 backend/ca.pem
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Android build output
+.gradle/
+build/
+local.properties
+
+# Firebase private service-account credentials
+service-account*.json

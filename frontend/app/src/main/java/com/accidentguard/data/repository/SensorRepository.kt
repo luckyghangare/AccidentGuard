@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 class SensorRepository {
     private val api = RetrofitClient.apiService
 
-    suspend fun getLatestSensorReading(token: String, vehicleId: Int): Result<SensorReading> = withContext(Dispatchers.IO) {
+    suspend fun getLatestSensorReading(token: String, vehicleId: Long): Result<SensorReading> = withContext(Dispatchers.IO) {
         try {
             val response = api.getLatestSensorReading("Bearer $token", vehicleId)
             if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
@@ -18,7 +18,7 @@ class SensorRepository {
             }
         } catch (e: Exception) {
             val demoReading = SensorReading(
-                id = 1,
+                id = 1L,
                 vehicleId = vehicleId,
                 obstacleDistance = 68.0f,
                 accelerationG = 1.12f,

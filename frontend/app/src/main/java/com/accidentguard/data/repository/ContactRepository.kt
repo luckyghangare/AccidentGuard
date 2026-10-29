@@ -35,7 +35,7 @@ class ContactRepository {
         }
     }
 
-    suspend fun updateContact(token: String, contactId: Int, name: String, phone: String, rel: String, isPrimary: Boolean): Result<EmergencyContact> = withContext(Dispatchers.IO) {
+    suspend fun updateContact(token: String, contactId: Long, name: String, phone: String, rel: String, isPrimary: Boolean): Result<EmergencyContact> = withContext(Dispatchers.IO) {
         try {
             val response = api.updateContact("Bearer $token", contactId, ContactRequest(name, phone, rel, isPrimary))
             if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
@@ -48,7 +48,7 @@ class ContactRepository {
         }
     }
 
-    suspend fun deleteContact(token: String, contactId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteContact(token: String, contactId: Long): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = api.deleteContact("Bearer $token", contactId)
             if (response.isSuccessful && response.body()?.success == true) {

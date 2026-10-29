@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.schemas.auth import UserRegister, UserLogin, UserResponse, TokenResponse
+from app.schemas.auth import UserRegister, UserLogin, UserResponse, TokenResponse, FCMTokenUpdate
 from app.utils.security import hash_password, verify_password, create_access_token
 from app.utils.response import success_response, error_response
 from app.dependencies import get_current_user
@@ -67,3 +67,9 @@ def update_profile(update_data: dict, current_user: User = Depends(get_current_u
     user_data = UserResponse.model_validate(current_user).model_dump()
     return success_response(data=user_data, message="Profile updated successfully")
 
+@router.post("/fcm-token")
+def update_fcm_token(token_data: FCMTokenUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    current_user.fcm_token = token_data.fcm_token
+    db.commit()
+    db.refresh(current_user)
+    return success_response(message="FCM token updated successfully")
