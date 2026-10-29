@@ -87,23 +87,59 @@ fun EmergencyContactsScreen(
                     CircularProgressIndicator(color = PrimaryBlue)
                 }
             } else {
-                if (state.contacts.isEmpty()) {
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(56.dp))
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("No emergency contacts yet", color = TextSecondary, fontSize = 15.sp)
-                            Text("Add a contact below", color = TextSecondary, fontSize = 13.sp)
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // ── RECEIVED INVITATIONS SECTION ──
+                    if (state.receivedInvitations.isNotEmpty()) {
+                        item {
+                            Text(
+                                "Pending Invitations",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        items(state.receivedInvitations) { invitation ->
+                            InvitationItem(
+                                invitation = invitation,
+                                onAccept = { viewModel.acceptInvitation(invitation.id) },
+                                onReject = { viewModel.rejectInvitation(invitation.id) }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                        item {
+                            Divider(modifier = Modifier.padding(vertical = 8.dp), color = DividerGrey)
                         }
                     }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
+
+                    // ── MY CONTACTS SECTION ──
+                    if (state.contacts.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.PersonAdd, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(56.dp))
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("No emergency contacts yet", color = TextSecondary, fontSize = 15.sp)
+                                    Text("Add a contact below", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Text(
+                                "My Emergency Contacts",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
                         items(state.contacts) { contact ->
                             ContactCard(
                                 contact = contact,
@@ -234,6 +270,62 @@ fun ContactDialog(
 }
 
 @Composable
+fun InvitationItem(
+    invitation: EmergencyContact,
+    onAccept: () -> Unit,
+    onReject: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED)), // Light orange bg
+        modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, WarningOrange.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "RECEIVED INVITATION",
+                    fontSize = 11.sp, color = WarningOrange, fontWeight = FontWeight.Bold
+                )
+                Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = WarningOrange, modifier = Modifier.size(16.dp))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "${invitation.name} wants to add you as their emergency contact.",
+                fontSize = 15.sp, color = TextPrimary, fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "Phone: ${invitation.phoneNumber}", fontSize = 13.sp, color = TextSecondary)
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                OutlinedButton(
+                    onClick = onReject,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.5f)),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Decline", fontSize = 13.sp)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onAccept,
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Accept", fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ContactCard(
     contact: EmergencyContact,
     onEdit: () -> Unit,
@@ -265,12 +357,24 @@ fun ContactCard(
                 )
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (contact.isPrimary) PrimaryBlue.copy(alpha = 0.1f) else Color.Transparent
+                    color = when {
+                        contact.status == "PENDING" -> WarningOrange.copy(alpha = 0.1f)
+                        contact.isPrimary -> PrimaryBlue.copy(alpha = 0.1f)
+                        else -> Color.Transparent
+                    }
                 ) {
                     Text(
-                        text = if (contact.isPrimary) "PRIMARY" else "SECONDARY",
+                        text = when {
+                            contact.status == "PENDING" -> "PENDING CONSENT"
+                            contact.isPrimary -> "PRIMARY"
+                            else -> "SECONDARY"
+                        },
                         fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = if (contact.isPrimary) PrimaryBlue else TextSecondary,
+                        color = when {
+                            contact.status == "PENDING" -> WarningOrange
+                            contact.isPrimary -> PrimaryBlue
+                            else -> TextSecondary
+                        },
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
@@ -281,19 +385,41 @@ fun ContactCard(
             Text(text = contact.relationshipType, fontSize = 13.sp, color = TextSecondary)
             Spacer(modifier = Modifier.height(6.dp))
             Text(text = contact.phoneNumber, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PrimaryBlue)
+
+            if (contact.status == "PENDING") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Waiting for user to accept your invitation...",
+                    fontSize = 12.sp,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    color = TextSecondary
+                )
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryBlue)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit", color = PrimaryBlue, fontWeight = FontWeight.SemiBold)
+                if (contact.status != "PENDING") {
+                    TextButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryBlue)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Edit", color = PrimaryBlue, fontWeight = FontWeight.SemiBold)
+                    }
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 TextButton(onClick = { showDeleteConfirm = true }) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp), tint = DangerRed)
+                    Icon(
+                        if (contact.status == "PENDING") Icons.Default.Cancel else Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = DangerRed
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete", color = DangerRed, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (contact.status == "PENDING") "Cancel" else "Delete",
+                        color = DangerRed,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }

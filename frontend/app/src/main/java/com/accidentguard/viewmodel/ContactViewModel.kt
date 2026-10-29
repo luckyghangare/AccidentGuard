@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 data class ContactUiState(
     val contacts: List<EmergencyContact> = emptyList(),
+    val receivedInvitations: List<EmergencyContact> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null
@@ -25,7 +26,12 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<ContactUiState> = _uiState
 
     init {
+        refreshAll()
+    }
+
+    fun refreshAll() {
         fetchContacts()
+        fetchReceivedInvitations()
     }
 
     fun fetchContacts() {
@@ -35,6 +41,46 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
             repo.getContacts(token)
                 .onSuccess { list ->
                     _uiState.value = _uiState.value.copy(contacts = list, isLoading = false)
+                }
+                .onFailure { err ->
+                    _uiState.value = _uiState.value.copy(errorMessage = err.message, isLoading = false)
+                }
+        }
+    }
+
+    fun fetchReceivedInvitations() {
+        val token = tokenManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            repo.getReceivedInvitations(token)
+                .onSuccess { list ->
+                    _uiState.value = _uiState.value.copy(receivedInvitations = list)
+                }
+        }
+    }
+
+    fun acceptInvitation(invitationId: Long) {
+        val token = tokenManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            repo.acceptInvitation(token, invitationId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(successMessage = "Invitation accepted")
+                    refreshAll()
+                }
+                .onFailure { err ->
+                    _uiState.value = _uiState.value.copy(errorMessage = err.message, isLoading = false)
+                }
+        }
+    }
+
+    fun rejectInvitation(invitationId: Long) {
+        val token = tokenManager.getAuthToken() ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            repo.rejectInvitation(token, invitationId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(successMessage = "Invitation rejected")
+                    refreshAll()
                 }
                 .onFailure { err ->
                     _uiState.value = _uiState.value.copy(errorMessage = err.message, isLoading = false)

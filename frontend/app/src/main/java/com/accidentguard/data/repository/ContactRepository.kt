@@ -60,4 +60,43 @@ class ContactRepository {
             Result.failure(Exception("Network error: ${e.message}"))
         }
     }
+
+    suspend fun getReceivedInvitations(token: String): Result<List<EmergencyContact>> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getReceivedInvitations("Bearer $token")
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.data ?: emptyList())
+            } else {
+                Result.failure(Exception("Failed to fetch invitations"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
+    }
+
+    suspend fun acceptInvitation(token: String, invitationId: Long): Result<EmergencyContact> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.acceptInvitation("Bearer $token", invitationId)
+            if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
+                Result.success(response.body()!!.data!!)
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to accept invitation"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
+    }
+
+    suspend fun rejectInvitation(token: String, invitationId: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.rejectInvitation("Bearer $token", invitationId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to reject invitation"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
+    }
 }

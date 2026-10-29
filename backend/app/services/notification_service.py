@@ -51,11 +51,39 @@ class NotificationService:
             return False
 
     @staticmethod
-    def send_accident_alert(db: Session, token: str, accident_id: int, location_text: str = "Unknown"):
+    def send_accident_alert(db: Session, token: str, accident_id: int, location_text: str = "Unknown", victim_name: str = "Someone"):
         return NotificationService.send_fcm_notification(
             token=token,
             title="AccidentGuard Emergency Alert",
-            body=f"A possible accident has been detected near {location_text}.",
-            data={"accident_id": str(accident_id), "type": "ACCIDENT"},
+            body=f"EMERGENCY: {victim_name} may have been in an accident near {location_text}.",
+            data={
+                "accident_id": str(accident_id),
+                "type": "ACCIDENT",
+                "victim_name": victim_name,
+                "location": location_text
+            },
             db=db
         )
+
+    @staticmethod
+    def send_accident_cancellation(db: Session, token: str, accident_id: int, victim_name: str = "Someone"):
+        return NotificationService.send_fcm_notification(
+            token=token,
+            title="Accident Alert Cancelled",
+            body=f"The accident alert for {victim_name} has been cancelled.",
+            data={
+                "accident_id": str(accident_id),
+                "type": "ACCIDENT_CANCELLED",
+                "victim_name": victim_name
+            },
+            db=db
+        )
+
+    @staticmethod
+    def send_multi_accident_alert(db: Session, tokens: list[str], accident_id: int, location_text: str = "Unknown", victim_name: str = "Someone"):
+        """Sends accident alerts to multiple recipients."""
+        success_count = 0
+        for token in tokens:
+            if NotificationService.send_accident_alert(db, token, accident_id, location_text, victim_name):
+                success_count += 1
+        return success_count
