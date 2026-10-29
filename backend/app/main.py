@@ -4,6 +4,20 @@ from fastapi.exceptions import RequestValidationError
 from app.config import settings
 from app.utils.response import success_response, error_response
 from app.routers import auth, vehicles, gps, sensors, accidents, contacts, hospitals, hospital_web
+import firebase_admin
+from firebase_admin import credentials
+import os
+
+# Initialize Firebase Admin SDK
+if settings.FIREBASE_SERVICE_ACCOUNT_PATH and os.path.exists(settings.FIREBASE_SERVICE_ACCOUNT_PATH):
+    try:
+        cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_PATH)
+        firebase_admin.initialize_app(cred)
+        print("Firebase Admin SDK initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing Firebase Admin SDK: {e}")
+else:
+    print("Firebase Service Account path not found. Push notifications will be disabled.")
 
 app = FastAPI(
     title=settings.APP_NAME,

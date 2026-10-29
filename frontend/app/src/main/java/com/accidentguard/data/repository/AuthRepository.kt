@@ -39,14 +39,14 @@ class AuthRepository {
 
         // 3. Fallback demo logins if offline
         if (trimmedEmail == "demo@accidentguard.com" && pass == "Demo@123") {
-            val demoUser = User(1, "Lucky Ghangare", "demo@accidentguard.com", "+91 9876543210")
+            val demoUser = User(1L, "Lucky Ghangare", "demo@accidentguard.com", "+91 9876543210")
             val demoLoginData = LoginData("demo_jwt_token_12345", "bearer", demoUser)
             return@withContext UnifiedLoginResult.UserSuccess(demoLoginData)
         }
 
         if (trimmedEmail == "apex.hospital@accidentguard.com" && pass == "Hospital@123") {
             val demoHosp = Hospital(
-                id = 1,
+                id = 1L,
                 name = "Apex Emergency Care Hospital",
                 email = "apex.hospital@accidentguard.com",
                 phoneNumber = "+91 712 2554433",
@@ -61,7 +61,7 @@ class AuthRepository {
 
         if ((trimmedEmail == "lifeline.hospital@accidentguard.com" || trimmedEmail.contains("lifeline")) && pass == "Hospital@123") {
             val demoHosp = Hospital(
-                id = 2,
+                id = 2L,
                 name = "Life Line Emergency Hospital",
                 email = "lifeline.hospital@accidentguard.com",
                 phoneNumber = "+91 712 2889900",
@@ -81,7 +81,7 @@ class AuthRepository {
                 .ifBlank { "Emergency Hospital" }
             val formattedName = if (rawName.contains("Hospital", ignoreCase = true)) rawName else "$rawName Hospital"
             val demoHosp = Hospital(
-                id = (100..999).random(),
+                id = (100..999).random().toLong(),
                 name = formattedName,
                 email = trimmedEmail,
                 phoneNumber = "+91 9876543210",
@@ -144,7 +144,7 @@ class AuthRepository {
             }
         } catch (e: Exception) {
             val newHosp = Hospital(
-                id = (100..999).random(),
+                id = (100..999).random().toLong(),
                 name = name.trim(),
                 email = email.trim(),
                 phoneNumber = phone.trim(),

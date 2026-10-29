@@ -1,9 +1,11 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
 }
 
 android {
+    // ... existing configuration
     namespace 'com.accidentguard'
     compileSdk 34
 
@@ -77,6 +79,13 @@ dependencies {
 
     // Security
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+
+    // OpenStreetMap (osmdroid)
+    implementation libs.osmdroid
+
+    // Firebase
+    implementation platform('com.google.firebase:firebase-bom:32.7.2')
+    implementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Tooling
     debugImplementation 'androidx.compose.ui:ui-tooling'

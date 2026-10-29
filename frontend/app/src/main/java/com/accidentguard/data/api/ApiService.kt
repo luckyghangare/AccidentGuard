@@ -26,21 +26,21 @@ interface ApiService {
     @GET("api/vehicles/{id}")
     suspend fun getVehicleDetail(
         @Header("Authorization") authHeader: String,
-        @Path("id") vehicleId: Int
+        @Path("id") vehicleId: Long
     ): Response<ApiResponse<Vehicle>>
 
     // GPS Location
     @GET("api/vehicles/{id}/location")
     suspend fun getLatestLocation(
         @Header("Authorization") authHeader: String,
-        @Path("id") vehicleId: Int
+        @Path("id") vehicleId: Long
     ): Response<ApiResponse<GpsLocation>>
 
     // Sensors
     @GET("api/vehicles/{id}/sensors/latest")
     suspend fun getLatestSensorReading(
         @Header("Authorization") authHeader: String,
-        @Path("id") vehicleId: Int
+        @Path("id") vehicleId: Long
     ): Response<ApiResponse<SensorReading>>
 
     // Accidents
@@ -50,7 +50,7 @@ interface ApiService {
     @PUT("api/accidents/{id}/cancel")
     suspend fun cancelAccidentAlert(
         @Header("Authorization") authHeader: String,
-        @Path("id") accidentId: Int
+        @Path("id") accidentId: Long
     ): Response<ApiResponse<Accident>>
 
     // Emergency Contacts
@@ -66,14 +66,14 @@ interface ApiService {
     @PUT("api/contacts/{id}")
     suspend fun updateContact(
         @Header("Authorization") authHeader: String,
-        @Path("id") contactId: Int,
+        @Path("id") contactId: Long,
         @Body request: ContactRequest
     ): Response<ApiResponse<EmergencyContact>>
 
     @DELETE("api/contacts/{id}")
     suspend fun deleteContact(
         @Header("Authorization") authHeader: String,
-        @Path("id") contactId: Int
+        @Path("id") contactId: Long
     ): Response<ApiResponse<Unit>>
 
     // Vehicles - Add
@@ -89,6 +89,12 @@ interface ApiService {
         @Header("Authorization") authHeader: String,
         @Body request: UpdateProfileRequest
     ): Response<ApiResponse<User>>
+
+    @POST("api/auth/fcm-token")
+    suspend fun updateFcmToken(
+        @Header("Authorization") authHeader: String,
+        @Body request: FcmTokenRequest
+    ): Response<ApiResponse<Unit>>
 
     // ── Hospital Auth & Operations ──
     @POST("api/hospitals/login")
@@ -106,20 +112,20 @@ interface ApiService {
     @GET("api/hospitals/alerts/{id}")
     suspend fun getHospitalAlertDetail(
         @Header("Authorization") authHeader: String,
-        @Path("id") alertId: Int
+        @Path("id") alertId: Long
     ): Response<ApiResponse<EmergencyAlert>>
 
     @POST("api/hospitals/alerts/{id}/dispatch")
     suspend fun dispatchAmbulance(
         @Header("Authorization") authHeader: String,
-        @Path("id") alertId: Int,
+        @Path("id") alertId: Long,
         @Body request: AmbulanceDispatchRequest
     ): Response<ApiResponse<EmergencyAlert>>
 
     @POST("api/hospitals/alerts/{id}/admit")
     suspend fun admitPatient(
         @Header("Authorization") authHeader: String,
-        @Path("id") alertId: Int,
+        @Path("id") alertId: Long,
         @Body notes: Map<String, String> = emptyMap()
     ): Response<ApiResponse<EmergencyAlert>>
 
@@ -131,4 +137,13 @@ interface ApiService {
         @Header("Authorization") authHeader: String,
         @Body request: UpdateFleetRequest
     ): Response<ApiResponse<Hospital>>
+
+    // Public Hospital Data for Map
+    @GET("api/hospitals/nearby")
+    suspend fun getNearbyHospitals(
+        @Header("Authorization") authHeader: String,
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("radius_km") radiusKm: Double = 10.0
+    ): Response<ApiResponse<List<Hospital>>>
 }

@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
@@ -17,6 +18,10 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "accidentguard_db"
     DB_SSL_CA: str = "ca.pem"
+
+    # Firebase Settings
+    FIREBASE_SERVICE_ACCOUNT_PATH: Optional[str] = None
+    FIREBASE_PROJECT_ID: Optional[str] = None
 
     # JWT Settings
     SECRET_KEY: str

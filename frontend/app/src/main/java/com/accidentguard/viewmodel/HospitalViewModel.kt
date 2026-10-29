@@ -98,7 +98,7 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun directDispatchAmbulance(alertId: Int) {
+    fun directDispatchAmbulance(alertId: Long) {
         val token = tokenManager.getAuthToken() ?: return
 
         val available = _stats.value?.availableAmbulances
@@ -142,7 +142,7 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun dispatchAmbulance(
-        alertId: Int,
+        alertId: Long,
         ambulanceNumber: String,
         driverName: String,
         driverPhone: String,
@@ -187,7 +187,7 @@ class HospitalViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun admitPatient(
-        alertId: Int,
+        alertId: Long,
         notes: String = "Patient admitted and stabilized"
     ) {
         val token = tokenManager.getAuthToken() ?: return

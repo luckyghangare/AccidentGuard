@@ -11,6 +11,7 @@ class User(Base):
     email = Column(String(120), unique=True, index=True, nullable=False)
     phone_number = Column(String(20), nullable=False)
     password_hash = Column(String(255), nullable=False)
+    fcm_token = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

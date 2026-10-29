@@ -3,8 +3,8 @@ package com.accidentguard.data.model
 import com.google.gson.annotations.SerializedName
 
 data class Vehicle(
-    @SerializedName("id") val id: Int,
-    @SerializedName("user_id") val userId: Int,
+    @SerializedName("id") val id: Long,
+    @SerializedName("user_id") val userId: Long,
     @SerializedName("name") val name: String,
     @SerializedName("vehicle_number") val vehicleNumber: String,
     @SerializedName("device_id") val deviceId: String?,

@@ -3,7 +3,7 @@ package com.accidentguard.data.model
 import com.google.gson.annotations.SerializedName
 
 data class Hospital(
-    @SerializedName("id") val id: Int = 0,
+    @SerializedName("id") val id: Long = 0,
     @SerializedName("name") val name: String = "",
     @SerializedName("email") val email: String = "",
     @SerializedName("phone_number") val phoneNumber: String = "",
@@ -13,7 +13,8 @@ data class Hospital(
     @SerializedName("longitude") val longitude: Double = 79.0882,
     @SerializedName("total_ambulances") val totalAmbulances: Int = 5,
     @SerializedName("available_ambulances") val availableAmbulances: Int = 5,
-    @SerializedName("is_active") val isActive: Boolean = true
+    @SerializedName("is_active") val isActive: Boolean = true,
+    val source: String = "backend"
 )
 
 data class HospitalLoginData(
@@ -49,9 +50,9 @@ data class VictimInfo(
 )
 
 data class EmergencyAlert(
-    @SerializedName("id") val id: Int,
-    @SerializedName("hospital_id") val hospitalId: Int,
-    @SerializedName("accident_id") val accidentId: Int,
+    @SerializedName("id") val id: Long,
+    @SerializedName("hospital_id") val hospitalId: Long,
+    @SerializedName("accident_id") val accidentId: Long,
     @SerializedName("status") val status: String,
     @SerializedName("damage_severity") val damageSeverity: String = "Critical",
     @SerializedName("latitude") val latitude: Double,

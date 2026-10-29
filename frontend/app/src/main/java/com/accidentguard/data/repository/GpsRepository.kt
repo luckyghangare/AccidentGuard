@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 class GpsRepository {
     private val api = RetrofitClient.apiService
 
-    suspend fun getLatestLocation(token: String, vehicleId: Int): Result<GpsLocation> = withContext(Dispatchers.IO) {
+    suspend fun getLatestLocation(token: String, vehicleId: Long): Result<GpsLocation> = withContext(Dispatchers.IO) {
         try {
             val response = api.getLatestLocation("Bearer $token", vehicleId)
             if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
@@ -19,7 +19,7 @@ class GpsRepository {
         } catch (e: Exception) {
             // Provide fallback demo GPS location
             val demoLocation = GpsLocation(
-                id = 1,
+                id = 1L,
                 vehicleId = vehicleId,
                 latitude = 21.1458,
                 longitude = 79.0882,

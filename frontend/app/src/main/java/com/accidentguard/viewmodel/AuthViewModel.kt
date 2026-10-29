@@ -7,6 +7,9 @@ import com.accidentguard.data.local.TokenManager
 import com.accidentguard.data.repository.AuthRepository
 import com.accidentguard.data.repository.UnifiedLoginResult
 import com.accidentguard.ui.notification.NotificationHelper
+import com.accidentguard.data.api.RetrofitClient
+import com.accidentguard.data.model.FcmTokenRequest
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -70,6 +73,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             phone = user.phoneNumber,
             userId = user.id
         )
+        syncFcmToken(result.data.accessToken)
         _uiState.value = AuthUiState.Success("Welcome back, ${user.fullName}!", role = "user")
     }
 
@@ -79,7 +83,26 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             token = hospLoginData.accessToken,
             hospital = hospLoginData.hospital
         )
+        syncFcmToken(hospLoginData.accessToken)
         _uiState.value = AuthUiState.Success("Hospital unit connected: ${hospLoginData.hospital.name}", role = "hospital")
+    }
+
+    private fun syncFcmToken(jwtToken: String) {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val fcmToken = task.result
+                viewModelScope.launch {
+                    try {
+                        RetrofitClient.apiService.updateFcmToken(
+                            authHeader = "Bearer $jwtToken",
+                            request = FcmTokenRequest(fcmToken)
+                        )
+                    } catch (e: Exception) {
+                        // Silent fail for token sync to not block login
+                    }
+                }
+            }
+        }
     }
 
     fun verifyOtp(email: String, otp: String, role: String) {
@@ -179,7 +202,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
-        tokenManager.clear()
-        notificationHelper.showNotification("Account", "Logged out securely.")
+        val jwtToken = tokenManager.getAuthToken()
+        if (!jwtToken.isNullOrEmpty()) {
+            viewModelScope.launch {
+                try {
+                    // Clear FCM token on backend before logging out
+                    RetrofitClient.apiService.updateFcmToken(
+                        authHeader = "Bearer $jwtToken",
+                        request = FcmTokenRequest(fcmToken = "")
+                    )
+                } catch (e: Exception) {
+                    // Silent fail to ensure logout still happens locally
+                }
+                tokenManager.clear()
+                notificationHelper.showNotification("Account", "Logged out securely.")
+            }
+        } else {
+            tokenManager.clear()
+            notificationHelper.showNotification("Account", "Logged out.")
+        }
     }
 }
