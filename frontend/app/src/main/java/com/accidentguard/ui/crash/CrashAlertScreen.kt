@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.accidentguard.ui.components.BottomNavigationBar
+import com.accidentguard.ui.navigation.Screen
 import com.accidentguard.ui.theme.*
 import com.accidentguard.viewmodel.CrashViewModel
 
@@ -33,6 +34,20 @@ fun CrashAlertScreen(
     viewModel: CrashViewModel
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(state.activeCallSessionId, state.livekitToken, state.livekitUrl) {
+        val sessionId = state.activeCallSessionId
+        val token = state.livekitToken
+        val url = state.livekitUrl
+        
+        if (sessionId != null && token != null && url != null) {
+            navController.navigate(Screen.ActiveCall.createRoute(sessionId, token, url, "Emergency (Victim)")) {
+                popUpTo(Screen.CrashAlert.route) { inclusive = false }
+            }
+        } else if (sessionId != null) {
+            navController.navigate(Screen.ActiveCallTransition.createRoute(sessionId))
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -211,6 +226,29 @@ fun CrashAlertScreen(
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
+
+                            val activeCallSessionId = state.activeCallSessionId
+                            if (activeCallSessionId != null) {
+                                Button(
+                                    onClick = { 
+                                        val token = state.livekitToken
+                                        val url = state.livekitUrl
+                                        if (token != null && url != null) {
+                                            navController.navigate(Screen.ActiveCall.createRoute(activeCallSessionId, token, url, "Emergency (Victim)"))
+                                        } else {
+                                            navController.navigate(Screen.ActiveCallTransition.createRoute(activeCallSessionId))
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                                ) {
+                                    Icon(Icons.Default.Call, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("JOIN EMERGENCY CALL", fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
 
                             OutlinedButton(
                                 onClick = { viewModel.resetToNormal() },

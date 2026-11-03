@@ -17,6 +17,7 @@ from app.schemas.accident import AccidentCreate, AccidentResponse
 from app.utils.response import success_response, error_response
 from app.dependencies import get_current_user
 from app.services.notification_service import NotificationService
+from app.services.call_orchestration_service import CallOrchestrationService
 
 router = APIRouter(prefix="/api/accidents", tags=["Accidents"])
 
@@ -136,6 +137,14 @@ def record_accident(
         db.commit()
         db.refresh(accident)
 
+        # Trigger Call Orchestration for a new confirmed accident
+        call_session = None
+        try:
+            call_session = CallOrchestrationService.initiate_emergency_call(db, accident.id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to initiate call orchestration: {e}")
+
         # Send accident notifications
         owner = current_user
         victim_name = owner.full_name
@@ -177,6 +186,23 @@ def record_accident(
         raise
 
     data = AccidentResponse.model_validate(accident).model_dump()
+    
+    # Add call details for victim to join immediately
+    if call_session:
+        from app.services.livekit_service import livekit_service
+        from app.config import settings
+        
+        data["call_session_id"] = call_session.id
+        data["livekit_url"] = settings.LIVEKIT_URL
+        try:
+            data["livekit_token"] = livekit_service.generate_token(
+                room_name=call_session.livekit_room_name,
+                participant_identity=str(owner.id),
+                participant_name=owner.full_name
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to generate victim LiveKit token: {e}")
 
     return success_response(
         data=data,
@@ -284,6 +310,13 @@ def cancel_accident_alert(
 
         db.commit()
         db.refresh(accident)
+
+        # Cancel related call session if user cancels the alert
+        try:
+            CallOrchestrationService.cancel_call_session(db, accident.id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to cancel call session: {e}")
 
         # Send accident notifications
         owner = current_user

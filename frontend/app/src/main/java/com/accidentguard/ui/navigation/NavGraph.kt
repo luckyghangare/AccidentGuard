@@ -1,6 +1,11 @@
 package com.accidentguard.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -24,6 +29,10 @@ import com.accidentguard.ui.settings.SettingsScreen
 import com.accidentguard.ui.settings.SecuritySettingsScreen
 import com.accidentguard.ui.security.BiometricLockScreen
 import com.accidentguard.ui.splash.SplashScreen
+import com.accidentguard.ui.call.IncomingCallScreen
+import com.accidentguard.ui.call.ActiveCallScreen
+import com.accidentguard.ui.call.CallViewModel
+import com.accidentguard.ui.call.CallUiState
 import com.accidentguard.ui.vehicle.VehicleMonitoringScreen
 import com.accidentguard.viewmodel.*
 import com.accidentguard.ui.theme.*
@@ -61,10 +70,10 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
     var isAppUnlocked by remember { mutableStateOf(!isBiometricEnabled) }
 
     // Auto-navigate when requirements (Permission/GPS) are met while on blocker screens
-    LaunchedEffect(locationState.hasPermission, locationState.isGpsEnabled, hasToken) {
+    LaunchedEffect(locationState.hasPermission, locationState.hasAudioPermission, locationState.isGpsEnabled, hasToken) {
         if (hasToken) {
             val currentRoute = navController.currentBackStackEntry?.destination?.route
-            if (locationState.hasPermission) {
+            if (locationState.hasPermission && locationState.hasAudioPermission) {
                 if (currentRoute == Screen.PermissionRequired.route) {
                     if (locationState.isGpsEnabled) {
                         navController.navigate(if (isHospital) Screen.HospitalDashboard.route else Screen.Dashboard.route) {
@@ -88,7 +97,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
     val startDest = if (hasToken) {
         when {
             isBiometricEnabled && !isAppUnlocked -> Screen.BiometricLock.route
-            !locationState.hasPermission -> Screen.PermissionRequired.route
+            !locationState.hasPermission || !locationState.hasAudioPermission -> Screen.PermissionRequired.route
             !locationState.isGpsEnabled -> Screen.GpsRequired.route
             isHospital -> Screen.HospitalDashboard.route
             else -> Screen.Dashboard.route
@@ -103,7 +112,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
             SplashScreen(onSplashFinished = {
                 val destination = if (tokenManager.isLoggedIn()) {
                     if (isBiometricEnabled) Screen.BiometricLock.route
-                    else if (!locationState.hasPermission) Screen.PermissionRequired.route
+                    else if (!locationState.hasPermission || !locationState.hasAudioPermission) Screen.PermissionRequired.route
                     else if (!locationState.isGpsEnabled) Screen.GpsRequired.route
                     else if (tokenManager.isHospital()) Screen.HospitalDashboard.route
                     else Screen.Dashboard.route
@@ -120,7 +129,7 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
             BiometricLockScreen(
                 onSuccess = {
                     isAppUnlocked = true
-                    val dest = if (!locationState.hasPermission) Screen.PermissionRequired.route
+                    val dest = if (!locationState.hasPermission || !locationState.hasAudioPermission) Screen.PermissionRequired.route
                               else if (!locationState.isGpsEnabled) Screen.GpsRequired.route
                               else if (isHospital) Screen.HospitalDashboard.route else Screen.Dashboard.route
                     navController.navigate(dest) {
@@ -196,5 +205,96 @@ fun AccidentGuardNavGraph(navController: NavHostController) {
         composable(Screen.AccidentHistory.route) { AccidentHistoryScreen(navController, viewModel()) }
         composable(Screen.VehicleMonitoring.route) { VehicleMonitoringScreen(navController, viewModel()) }
         composable(Screen.CrashAlert.route) { CrashAlertScreen(navController, viewModel()) }
+
+        composable(
+            route = Screen.IncomingCall.route,
+            arguments = listOf(
+                navArgument("sessionId") { type = NavType.IntType },
+                navArgument("autoAccept") { type = NavType.BoolType; defaultValue = false },
+                navArgument("victimName") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getInt("sessionId") ?: 0
+            val autoAccept = backStackEntry.arguments?.getBoolean("autoAccept") ?: false
+            val victimName = backStackEntry.arguments?.getString("victimName")
+            val factory = remember { ViewModelFactory(context) }
+            val callViewModel: CallViewModel = viewModel(factory = factory)
+            
+            IncomingCallScreen(
+                sessionId = sessionId,
+                autoAccept = autoAccept,
+                victimName = victimName,
+                viewModel = callViewModel,
+                onNavigateToActiveCall = { sid, token, url ->
+                    navController.navigate(Screen.ActiveCall.createRoute(sid, token, url, victimName)) {
+                        popUpTo(Screen.IncomingCall.route) { inclusive = true }
+                    }
+                },
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.ActiveCall.route,
+            arguments = listOf(
+                navArgument("sessionId") { type = NavType.IntType },
+                navArgument("token") { type = NavType.StringType },
+                navArgument("livekitUrl") { type = NavType.StringType },
+                navArgument("victimName") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getInt("sessionId") ?: 0
+            val token = backStackEntry.arguments?.getString("token") ?: ""
+            val encodedUrl = backStackEntry.arguments?.getString("livekitUrl") ?: ""
+            val victimName = backStackEntry.arguments?.getString("victimName")
+            val livekitUrl = String(android.util.Base64.decode(encodedUrl, android.util.Base64.URL_SAFE))
+            
+            val factory = remember { ViewModelFactory(context) }
+            val callViewModel: CallViewModel = viewModel(factory = factory)
+            
+            ActiveCallScreen(
+                sessionId = sessionId,
+                token = token,
+                livekitUrl = livekitUrl,
+                victimName = victimName,
+                viewModel = callViewModel,
+                onCallEnded = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ActiveCallTransition.route,
+            arguments = listOf(
+                navArgument("sessionId") { type = NavType.IntType },
+                navArgument("victimName") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getInt("sessionId") ?: 0
+            val victimName = backStackEntry.arguments?.getString("victimName")
+            val factory = remember { ViewModelFactory(context) }
+            val callViewModel: CallViewModel = viewModel(factory = factory)
+            val uiState by callViewModel.uiState.collectAsStateWithLifecycle()
+            val tokenManager = remember { TokenManager(context) }
+
+            LaunchedEffect(sessionId) {
+                val token = tokenManager.getAuthToken() ?: ""
+                callViewModel.fetchTokenAndJoin(context, sessionId, token, victimName ?: "Someone")
+            }
+
+            LaunchedEffect(uiState) {
+                if (uiState is CallUiState.Active) {
+                    val active = uiState as CallUiState.Active
+                    navController.navigate(Screen.ActiveCall.createRoute(active.sessionId, active.token, active.livekitUrl, victimName)) {
+                        popUpTo(Screen.ActiveCallTransition.route) { inclusive = true }
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
     }
 }

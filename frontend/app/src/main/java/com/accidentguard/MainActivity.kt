@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -17,8 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavHostController
 import com.accidentguard.data.service.AccidentGuardMessagingService
 import com.accidentguard.ui.navigation.AccidentGuardNavGraph
+import com.accidentguard.ui.navigation.Screen
 import com.accidentguard.ui.theme.AccidentGuardTheme
 import com.google.firebase.messaging.FirebaseMessaging
 
@@ -57,7 +61,36 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    
+                    LaunchedEffect(intent) {
+                        handleIntent(intent, navController)
+                    }
+                    
                     AccidentGuardNavGraph(navController = navController)
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?, navController: NavHostController) {
+        intent?.let {
+            val navigateTo = it.getStringExtra("navigate_to")
+            val sessionId = it.getIntExtra("session_id", -1)
+            val autoAccept = it.getBooleanExtra("auto_accept", false)
+            val victimName = it.getStringExtra("victim_name")
+            
+            if (navigateTo == "incoming_call" && sessionId != -1) {
+                // Remove the extra to prevent re-processing on recomposition if LaunchedEffect(intent) re-runs
+                it.removeExtra("navigate_to")
+
+                navController.navigate(Screen.IncomingCall.createRoute(sessionId, autoAccept, victimName)) {
+                    popUpTo(Screen.Dashboard.route) { saveState = true }
+                    launchSingleTop = true
                 }
             }
         }

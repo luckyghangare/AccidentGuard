@@ -12,5 +12,8 @@ data class Accident(
     @SerializedName("impact_g") val impactG: Float,
     @SerializedName("status") val status: String,
     @SerializedName("timestamp") val timestamp: String,
+    @SerializedName("call_session_id") val callSessionId: Int? = null,
+    @SerializedName("livekit_token") val livekitToken: String? = null,
+    @SerializedName("livekit_url") val livekitUrl: String? = null,
     val source: String = "backend"
 )

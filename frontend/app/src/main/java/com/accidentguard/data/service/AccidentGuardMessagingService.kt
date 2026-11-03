@@ -19,6 +19,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import com.accidentguard.ui.notification.NotificationHelper
+
 class AccidentGuardMessagingService : FirebaseMessagingService() {
 
     companion object {
@@ -61,6 +63,14 @@ class AccidentGuardMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Log.d(TAG, "From: ${remoteMessage.from}")
 
+        val type = remoteMessage.data["type"]
+        if (type != null) {
+            handleCallNotification(type, remoteMessage.data)
+            if (type.startsWith("EMERGENCY_CALL")) {
+                return // Handled by call logic
+            }
+        }
+
         // If notification payload is present, Firebase displays it automatically in background.
         // In foreground, we handle it here.
         remoteMessage.notification?.let {
@@ -86,6 +96,57 @@ class AccidentGuardMessagingService : FirebaseMessagingService() {
             val title = remoteMessage.data["title"] ?: "AccidentGuard Emergency"
             val body = remoteMessage.data["body"] ?: "A crash has been detected."
             sendNotification(title, body)
+        }
+    }
+
+    private fun handleCallNotification(type: String, data: Map<String, String>) {
+        val helper = NotificationHelper(applicationContext)
+        val sessionIdStr = data["session_id"]
+        val sessionId = sessionIdStr?.toIntOrNull()
+
+        if (sessionId == null) {
+            Log.e(TAG, "Call notification missing or invalid session_id: $sessionIdStr")
+            return
+        }
+
+        val victimName = data["victim_name"] ?: "Someone"
+        Log.d(TAG, "Handling call event: $type for session: $sessionId")
+
+        when (type) {
+            "EMERGENCY_CALL_INVITATION" -> {
+                helper.showCallInvitation(sessionId, victimName)
+            }
+            "EMERGENCY_CALL_CANCELLED",
+            "EMERGENCY_CALL_ALREADY_CONNECTED",
+            "EMERGENCY_CALL_MISSED",
+            "EMERGENCY_CALL_FAILED",
+            "EMERGENCY_CALL_ACCEPTED" -> {
+                com.accidentguard.ui.notification.RingtonePlayer.stopRinging()
+                helper.cancelCallNotification(sessionId)
+
+                val title = when (type) {
+                    "EMERGENCY_CALL_CANCELLED" -> "Call Cancelled"
+                    "EMERGENCY_CALL_ALREADY_CONNECTED" -> "Call Answered"
+                    "EMERGENCY_CALL_MISSED" -> "Missed Emergency Call"
+                    "EMERGENCY_CALL_FAILED" -> "Call Failed"
+                    "EMERGENCY_CALL_ACCEPTED" -> "Call Accepted"
+                    else -> "Emergency Call Update"
+                }
+
+                val body = when (type) {
+                    "EMERGENCY_CALL_CANCELLED" -> "The emergency invitation for $victimName has been cancelled."
+                    "EMERGENCY_CALL_ALREADY_CONNECTED" -> "Another contact has already joined the call for $victimName."
+                    "EMERGENCY_CALL_MISSED" -> "You missed an emergency call from $victimName."
+                    "EMERGENCY_CALL_FAILED" -> "Could not connect to the emergency call for $victimName."
+                    "EMERGENCY_CALL_ACCEPTED" -> "The emergency call for $victimName was accepted."
+                    else -> "The emergency call status has changed."
+                }
+
+                // Only show outcome notification for relevant events if not already connected
+                if (type != "EMERGENCY_CALL_ACCEPTED") {
+                    helper.showNotification(title, body, isCritical = false)
+                }
+            }
         }
     }
 
