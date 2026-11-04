@@ -46,7 +46,30 @@ class TokenManager(context: Context) {
     // --------------------------------------------------
 
     fun getServerUrl(): String {
-        return RetrofitClient.DEFAULT_BASE_URL
+        val savedUrl = prefs.getString(KEY_SERVER_URL, null)
+
+        // Migrate old temporary Cloudflare Quick Tunnel URLs.
+        val isOldQuickTunnel = savedUrl
+            ?.contains(".trycloudflare.com", ignoreCase = true) == true
+
+        val normalizedSavedUrl = if (!savedUrl.isNullOrBlank() && !isOldQuickTunnel) {
+            normalizeServerUrl(savedUrl)
+        } else {
+            ""
+        }
+
+        val serverUrl = normalizedSavedUrl.ifEmpty {
+            RetrofitClient.DEFAULT_BASE_URL
+        }
+
+        // Save the migrated/default URL for future app launches.
+        if (savedUrl != serverUrl) {
+            prefs.edit()
+                .putString(KEY_SERVER_URL, serverUrl)
+                .apply()
+        }
+
+        return serverUrl
     }
 
     /**

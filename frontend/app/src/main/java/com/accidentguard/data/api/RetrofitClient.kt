@@ -10,7 +10,7 @@ import com.accidentguard.BuildConfig
 object RetrofitClient {
     // Default fallback IP address or local dev URL. 
     // In production, this should be replaced by a stable URL via TokenManager.
-    const val DEFAULT_BASE_URL = "https://cumulative-choices-opt-bugs.trycloudflare.com/"
+    const val DEFAULT_BASE_URL = "https://api.ritiksawarkar.me/"
     
     var BASE_URL = DEFAULT_BASE_URL
         private set
