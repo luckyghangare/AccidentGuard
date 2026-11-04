@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from app.config import settings
 from app.utils.response import success_response, error_response
-from app.routers import auth, vehicles, gps, sensors, accidents, contacts, hospitals, hospital_web
+from app.routers import auth, vehicles, gps, sensors, accidents, contacts, hospitals, hospital_web, calls
 import firebase_admin
 from firebase_admin import credentials
 import os
@@ -43,6 +43,7 @@ app.include_router(accidents.router)
 app.include_router(contacts.router)
 app.include_router(hospitals.router)
 app.include_router(hospital_web.router)
+app.include_router(calls.router)
 
 
 # Custom Validation Exception Handler to match unified JSON API response standard

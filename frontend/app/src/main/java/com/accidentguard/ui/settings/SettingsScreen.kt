@@ -1,3 +1,4 @@
+
 package com.accidentguard.ui.settings
 
 import android.Manifest
@@ -47,6 +48,10 @@ fun SettingsScreen(
     var userName by remember { mutableStateOf(tokenManager.getUserName()) }
     var userEmail by remember { mutableStateOf(tokenManager.getUserEmail()) }
 
+    // Backend server configuration
+    var showServerDialog by remember { mutableStateOf(false) }
+    var serverUrl by remember { mutableStateOf(tokenManager.getServerUrl()) }
+
     var pushEnabled by remember { mutableStateOf(true) }
     var crashAlerts by remember { mutableStateOf(true) }
 
@@ -55,19 +60,32 @@ fun SettingsScreen(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            notificationHelper.showNotification("Success", "Notifications enabled for Accident Guard")
+            notificationHelper.showNotification(
+                "Success",
+                "Notifications enabled for Accident Guard"
+            )
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile & Settings", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                title = {
+                    Text(
+                        "Profile & Settings",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         },
-        bottomBar = { BottomNavigationBar(navController = navController) }
+        bottomBar = {
+            BottomNavigationBar(navController = navController)
+        }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -76,32 +94,58 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // ── Profile Header ──
+
+            // Profile Header
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                colors = CardDefaults.cardColors(
+                    containerColor = SurfaceCard
+                ),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                        modifier = Modifier.size(80.dp).clip(CircleShape).background(PrimaryBlue.copy(alpha = 0.1f)),
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryBlue.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(52.dp))
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = PrimaryBlue,
+                            modifier = Modifier.size(52.dp)
+                        )
                     }
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(userName.ifEmpty { "User" }, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(userEmail.ifEmpty { "—" }, fontSize = 14.sp, color = TextSecondary)
+
+                    Text(
+                        userName.ifEmpty { "User" },
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Text(
+                        userEmail.ifEmpty { "—" },
+                        fontSize = 14.sp,
+                        color = TextSecondary
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Security Section ──
+            // Security Section
             SettingsSectionHeader("Security & Privacy")
+
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Security,
@@ -115,9 +159,11 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Notifications Section ──
+            // Notifications Section
             SettingsSectionHeader("Alert Notifications")
+
             SettingsCard {
+
                 SettingsToggleRow(
                     icon = Icons.Default.NotificationsActive,
                     title = "Push Notifications",
@@ -126,21 +172,38 @@ fun SettingsScreen(
                     checked = pushEnabled
                 ) {
                     pushEnabled = it
-                    if (it && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+
+                    if (
+                        it &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    ) {
+                        permissionLauncher.launch(
+                            Manifest.permission.POST_NOTIFICATIONS
+                        )
                     }
                 }
-                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
+
+                HorizontalDivider(
+                    color = DividerGrey,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
+
                 SettingsToggleRow(
                     icon = Icons.Default.Warning,
                     title = "Crash Alerts",
                     subtitle = "High priority emergency notifications",
                     iconTint = DangerRed,
                     checked = crashAlerts
-                ) { crashAlerts = it }
-                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
+                ) {
+                    crashAlerts = it
+                }
 
-                // TEST NOTIFICATION BUTTON
+                HorizontalDivider(
+                    color = DividerGrey,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
+
+                // Test Notification
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.Send,
                     title = "Send Test Notification",
@@ -156,36 +219,194 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Account & App ──
+            // Application Section
             SettingsSectionHeader("Application")
+
             SettingsCard {
-                SettingsRow(Icons.Default.Dns, "Backend Server", "Configure connection URL", TextSecondary) {
-                    // Dialog implementation here
+
+                SettingsRow(
+                    icon = Icons.Default.Dns,
+                    title = "Backend Server",
+                    subtitle = "Configure connection URL",
+                    iconTint = TextSecondary
+                ) {
+                    serverUrl = tokenManager.getServerUrl()
+                    showServerDialog = true
                 }
-                HorizontalDivider(color = DividerGrey, modifier = Modifier.padding(start = 56.dp))
-                SettingsRow(Icons.Default.Info, "About Accident Guard", "v1.2.0 Stable", TextSecondary) { }
+
+                HorizontalDivider(
+                    color = DividerGrey,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
+
+                SettingsRow(
+                    icon = Icons.Default.Info,
+                    title = "About Accident Guard",
+                    subtitle = "v1.2.0 Stable",
+                    iconTint = TextSecondary
+                ) { }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Logout ──
+            // Logout
             Card(
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-                modifier = Modifier.fillMaxWidth().clickable {
-                    tokenManager.clear()
-                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
-                }
+                colors = CardDefaults.cardColors(
+                    containerColor = SurfaceCard
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        tokenManager.clear()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) {
+                                inclusive = true
+                            }
+                        }
+                    }
             ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, contentDescription = null, tint = DangerRed)
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Logout,
+                        contentDescription = null,
+                        tint = DangerRed
+                    )
+
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Logout from Device", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DangerRed)
+
+                    Text(
+                        "Logout from Device",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DangerRed
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    // Backend Server Configuration Dialog
+    if (showServerDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showServerDialog = false
+            },
+
+            title = {
+                Text(
+                    text = "Backend Server Configuration",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+
+            text = {
+                Column {
+
+                    Text("Enter your backend server URL.")
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = serverUrl,
+                        onValueChange = {
+                            serverUrl = it
+                        },
+                        label = {
+                            Text("Backend URL")
+                        },
+                        placeholder = {
+                            Text("https://your-server.trycloudflare.com/")
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Use the active Cloudflare Tunnel URL.",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+            },
+
+            confirmButton = {
+                TextButton(
+                    onClick = {
+
+                        val raw = serverUrl.trim()
+
+                        if (raw.isBlank()) {
+                            Toast.makeText(
+                                context,
+                                "Please enter a server URL",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@TextButton
+                        }
+
+                        val withScheme = when {
+                            raw.startsWith(
+                                "https://",
+                                ignoreCase = true
+                            ) || raw.startsWith(
+                                "http://",
+                                ignoreCase = true
+                            ) -> raw
+
+                            else -> "https://$raw"
+                        }
+
+                        val normalized = if (withScheme.endsWith("/")) {
+                            withScheme
+                        } else {
+                            "$withScheme/"
+                        }
+
+                        tokenManager.setServerUrl(normalized)
+
+                        if (tokenManager.getServerUrl() == normalized) {
+
+                            showServerDialog = false
+
+                            Toast.makeText(
+                                context,
+                                "Backend URL saved successfully",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                        } else {
+
+                            Toast.makeText(
+                                context,
+                                "Invalid server URL",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showServerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -193,8 +414,13 @@ fun SettingsScreen(
 fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
-        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextSecondary,
-        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        color = TextSecondary,
+        modifier = Modifier.padding(
+            bottom = 8.dp,
+            start = 4.dp
+        )
     )
 }
 
@@ -202,7 +428,9 @@ fun SettingsSectionHeader(title: String) {
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        colors = CardDefaults.cardColors(
+            containerColor = SurfaceCard
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(content = content)
@@ -210,47 +438,121 @@ fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun SettingsRow(icon: ImageVector, title: String, subtitle: String, iconTint: Color, onClick: () -> Unit) {
+fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(iconTint.copy(alpha = 0.1f)),
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
         }
+
         Spacer(modifier = Modifier.width(14.dp))
+
         Column {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+            Text(
+                title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+
+            Text(
+                subtitle,
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
         }
+
         Spacer(modifier = Modifier.weight(1f))
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
+
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = Color.LightGray
+        )
     }
 }
 
 @Composable
-fun SettingsToggleRow(icon: ImageVector, title: String, subtitle: String, iconTint: Color, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun SettingsToggleRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    iconTint: Color,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(iconTint.copy(alpha = 0.1f)),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
             }
+
             Spacer(modifier = Modifier.width(14.dp))
+
             Column {
-                Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+                Text(
+                    title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+
+                Text(
+                    subtitle,
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedTrackColor = PrimaryBlue))
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = PrimaryBlue
+            )
+        )
     }
 }

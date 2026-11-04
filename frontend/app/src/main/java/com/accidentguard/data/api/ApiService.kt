@@ -47,6 +47,12 @@ interface ApiService {
     @GET("api/accidents")
     suspend fun getAccidentHistory(@Header("Authorization") authHeader: String): Response<ApiResponse<List<Accident>>>
 
+    @POST("api/accidents/report")
+    suspend fun reportAccident(
+        @Header("Authorization") authHeader: String,
+        @Body request: AccidentCreateRequest
+    ): Response<ApiResponse<Accident>>
+
     @PUT("api/accidents/{id}/cancel")
     suspend fun cancelAccidentAlert(
         @Header("Authorization") authHeader: String,
@@ -169,4 +175,39 @@ interface ApiService {
         @Query("lon") lon: Double,
         @Query("radius_km") radiusKm: Double = 10.0
     ): Response<ApiResponse<List<Hospital>>>
+
+    // ── Emergency Call Endpoints ──
+    @GET("api/calls/active")
+    suspend fun getActiveCalls(@Header("Authorization") authHeader: String): Response<List<EmergencyCallSession>>
+
+    @GET("api/calls/{id}")
+    suspend fun getCallDetails(
+        @Header("Authorization") authHeader: String,
+        @Path("id") sessionId: Int
+    ): Response<EmergencyCallSession>
+
+    @POST("api/calls/{id}/accept")
+    suspend fun acceptCall(
+        @Header("Authorization") authHeader: String,
+        @Path("id") sessionId: Int
+    ): Response<ApiResponse<CallAcceptResponse>>
+
+    @POST("api/calls/{id}/reject")
+    suspend fun rejectCall(
+        @Header("Authorization") authHeader: String,
+        @Path("id") sessionId: Int,
+        @Body request: CallActionRequest
+    ): Response<ApiResponse<Unit>>
+
+    @POST("api/calls/{id}/token")
+    suspend fun getCallToken(
+        @Header("Authorization") authHeader: String,
+        @Path("id") sessionId: Int
+    ): Response<CallTokenResponse>
+
+    @POST("api/calls/{id}/end")
+    suspend fun endCall(
+        @Header("Authorization") authHeader: String,
+        @Path("id") sessionId: Int
+    ): Response<ApiResponse<Unit>>
 }

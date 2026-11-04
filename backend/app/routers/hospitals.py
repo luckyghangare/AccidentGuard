@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+import math
 from typing import List, Optional
 from app.database import get_db
 from app.models import Hospital, HospitalEmergencyAlert, Accident, Vehicle, User, Notification
@@ -10,10 +12,10 @@ from app.schemas.hospital import (
 )
 from app.utils.security import hash_password, verify_password, create_access_token
 from app.utils.response import success_response, error_response
+from app.utils.geo import calculate_distance
 from app.dependencies import get_current_hospital
 
 router = APIRouter(prefix="/api/hospitals", tags=["Hospital Operations"])
-
 
 def format_alert_response(alert: HospitalEmergencyAlert, db: Session) -> dict:
     accident = alert.accident
@@ -63,60 +65,90 @@ def format_alert_response(alert: HospitalEmergencyAlert, db: Session) -> dict:
         "created_at": alert.created_at.isoformat() if alert.created_at else None
     }
 
+@router.get("/nearby")
+def get_nearby_hospitals(
+    lat: float,
+    lon: float,
+    radius_km: float = 10.0,
+    db: Session = Depends(get_db)
+):
+    """Fetch active hospitals near the given coordinates."""
+    hospitals = db.query(Hospital).filter(Hospital.is_active == True).all()
+    results = []
+    for h in hospitals:
+        dist = calculate_distance(lat, lon, h.latitude, h.longitude)
+        if dist <= radius_km:
+            h_data = HospitalResponse.model_validate(h).model_dump()
+            h_data["distance_km"] = round(dist, 2)
+            results.append(h_data)
+            
+    # Sort by distance
+    results.sort(key=lambda x: x["distance_km"])
+    
+    return success_response(data=results, message=f"Found {len(results)} hospitals within {radius_km}km")
 
 @router.post("/register")
 def register_hospital(hospital_in: HospitalRegister, db: Session = Depends(get_db)):
+    # Check for existing hospital
     existing = db.query(Hospital).filter(Hospital.email == hospital_in.email).first()
     if existing:
-        return error_response("EMAIL_EXISTS", "Hospital with this email is already registered", status_code=400)
+        return error_response("EMAIL_EXISTS", "Hospital with this email already exists", status_code=status.HTTP_400_BAD_REQUEST)
 
-    hospital = Hospital(
-        name=hospital_in.name,
-        email=hospital_in.email,
-        phone_number=hospital_in.phone_number,
-        password_hash=hash_password(hospital_in.password),
-        address=hospital_in.address,
-        city=hospital_in.city or "Nagpur",
-        latitude=hospital_in.latitude or 21.1458,
-        longitude=hospital_in.longitude or 79.0882,
-        total_ambulances=hospital_in.total_ambulances or 5,
-        available_ambulances=hospital_in.total_ambulances or 5,
-        is_active=True
-    )
-    db.add(hospital)
-    db.commit()
-    db.refresh(hospital)
+    try:
+        hospital = Hospital(
+            name=hospital_in.name,
+            email=hospital_in.email,
+            phone_number=hospital_in.phone_number,
+            password_hash=hash_password(hospital_in.password),
+            address=hospital_in.address,
+            city=hospital_in.city or "Nagpur",
+            latitude=hospital_in.latitude or 21.1458,
+            longitude=hospital_in.longitude or 79.0882,
+            total_ambulances=hospital_in.total_ambulances or 5,
+            available_ambulances=hospital_in.total_ambulances or 5,
+            is_active=True
+        )
+        db.add(hospital)
+        db.commit()
+        db.refresh(hospital)
 
-    token = create_access_token(data={"sub": hospital.email, "role": "hospital", "hospital_id": hospital.id})
-    hospital_data = HospitalResponse.model_validate(hospital).model_dump()
+        token = create_access_token(data={"sub": hospital.email, "role": "hospital", "hospital_id": hospital.id})
+        hospital_data = HospitalResponse.model_validate(hospital).model_dump()
 
-    return success_response(
-        data={"access_token": token, "token_type": "bearer", "hospital": hospital_data},
-        message="Hospital registered successfully",
-        status_code=201
-    )
-
+        return success_response(
+            data={"access_token": token, "token_type": "bearer", "hospital": hospital_data},
+            message="Hospital registered successfully",
+            status_code=status.HTTP_201_CREATED
+        )
+    except IntegrityError:
+        db.rollback()
+        return error_response("EMAIL_EXISTS", "A hospital with this email is already registered.", status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        db.rollback()
+        return error_response("SERVER_ERROR", "An unexpected error occurred during hospital registration.", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post("/login")
 def login_hospital(credentials: HospitalLogin, db: Session = Depends(get_db)):
     hospital = db.query(Hospital).filter(Hospital.email == credentials.email).first()
+    
     if not hospital or not verify_password(credentials.password, hospital.password_hash):
-        return error_response("INVALID_CREDENTIALS", "Invalid hospital email or password", status_code=401)
-
+        return error_response("INVALID_CREDENTIALS", "Invalid email or password", status_code=status.HTTP_401_UNAUTHORIZED)
+        
+    if not hospital.is_active:
+        return error_response("ACCOUNT_INACTIVE", "This hospital account is inactive. Please contact system admin.", status_code=status.HTTP_403_FORBIDDEN)
+    
     token = create_access_token(data={"sub": hospital.email, "role": "hospital", "hospital_id": hospital.id})
     hospital_data = HospitalResponse.model_validate(hospital).model_dump()
-
+    
     return success_response(
         data={"access_token": token, "token_type": "bearer", "hospital": hospital_data},
         message="Hospital login successful"
     )
 
-
 @router.get("/me")
-def get_hospital_profile(current_hospital: Hospital = Depends(get_current_hospital)):
-    data = HospitalResponse.model_validate(current_hospital).model_dump()
-    return success_response(data=data, message="Hospital details fetched")
-
+def get_hospital_me(current_hospital: Hospital = Depends(get_current_hospital)):
+    hospital_data = HospitalResponse.model_validate(current_hospital).model_dump()
+    return success_response(data=hospital_data, message="Hospital details fetched successfully")
 
 @router.get("/alerts")
 def get_emergency_alerts(current_hospital: Hospital = Depends(get_current_hospital), db: Session = Depends(get_db)):
@@ -126,7 +158,6 @@ def get_emergency_alerts(current_hospital: Hospital = Depends(get_current_hospit
 
     formatted_alerts = [format_alert_response(a, db) for a in alerts]
     return success_response(data=formatted_alerts, message="Emergency alerts retrieved successfully")
-
 
 @router.get("/alerts/{alert_id}")
 def get_alert_detail(alert_id: int, current_hospital: Hospital = Depends(get_current_hospital), db: Session = Depends(get_db)):
@@ -139,7 +170,6 @@ def get_alert_detail(alert_id: int, current_hospital: Hospital = Depends(get_cur
 
     data = format_alert_response(alert, db)
     return success_response(data=data, message="Alert details retrieved")
-
 
 @router.post("/alerts/{alert_id}/dispatch")
 def dispatch_ambulance(
@@ -184,7 +214,6 @@ def dispatch_ambulance(
     data = format_alert_response(alert, db)
     return success_response(data=data, message=f"Ambulance {amb_num} dispatched directly! ETA: {eta} mins")
 
-
 @router.put("/fleet")
 @router.patch("/fleet")
 def update_hospital_fleet(
@@ -201,7 +230,6 @@ def update_hospital_fleet(
     db.refresh(current_hospital)
     data = HospitalResponse.model_validate(current_hospital).model_dump()
     return success_response(data=data, message="Ambulance fleet status updated successfully")
-
 
 @router.post("/alerts/{alert_id}/admit")
 def admit_patient(
@@ -235,7 +263,6 @@ def admit_patient(
 
     data = format_alert_response(alert, db)
     return success_response(data=data, message="Patient successfully marked as Admitted/Treated")
-
 
 @router.get("/stats")
 def get_hospital_stats(current_hospital: Hospital = Depends(get_current_hospital), db: Session = Depends(get_db)):

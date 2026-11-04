@@ -6,6 +6,7 @@ from app.models.accident import Accident
 from app.models.contact import EmergencyContact
 from app.models.notification import Notification
 from app.models.hospital import Hospital, HospitalEmergencyAlert
+from app.models.call import EmergencyCallSession, CallParticipant
 
 __all__ = [
     "User",
@@ -16,6 +17,8 @@ __all__ = [
     "EmergencyContact",
     "Notification",
     "Hospital",
-    "HospitalEmergencyAlert"
+    "HospitalEmergencyAlert",
+    "EmergencyCallSession",
+    "CallParticipant"
 ]
 
