@@ -38,6 +38,7 @@ data class LiveLocationState(
     val isTrackingActive: Boolean = false,
     val accuracy: Float = 0f,
     val hasPermission: Boolean = false,
+    val hasAudioPermission: Boolean = false,
     val isGpsEnabled: Boolean = false,
     val accidents: List<Accident> = emptyList(),
     val hospitals: List<Hospital> = emptyList(),
@@ -162,6 +163,10 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
         val permissionGranted = hasFineLocation || hasCoarseLocation
 
+        val audioPermissionGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
         val gpsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             locationManager.isLocationEnabled
         } else {
@@ -175,6 +180,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
         _uiState.value = _uiState.value.copy(
             hasPermission = permissionGranted,
+            hasAudioPermission = audioPermissionGranted,
             isGpsEnabled = gpsEnabled,
             isTrackingActive = LocationService.isTracking
         )

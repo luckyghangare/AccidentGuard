@@ -33,6 +33,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.8'
@@ -86,6 +87,9 @@ dependencies {
     // Firebase
     implementation platform('com.google.firebase:firebase-bom:32.7.2')
     implementation 'com.google.firebase:firebase-messaging-ktx'
+
+    // LiveKit
+    implementation 'io.livekit:livekit-android:2.1.0'
 
     // Tooling
     debugImplementation 'androidx.compose.ui:ui-tooling'

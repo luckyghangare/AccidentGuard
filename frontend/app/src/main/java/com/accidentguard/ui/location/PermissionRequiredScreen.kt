@@ -35,9 +35,17 @@ fun PermissionRequiredScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val granted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
-                      permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
-        if (granted) {
+        val locationGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                              permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+        val audioGranted = permissions.getOrDefault(Manifest.permission.RECORD_AUDIO, false)
+        
+        val bluetoothGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            permissions.getOrDefault(Manifest.permission.BLUETOOTH_CONNECT, false)
+        } else {
+            true
+        }
+        
+        if (locationGranted && audioGranted && bluetoothGranted) {
             onPermissionGranted()
         } else {
             permissionDeniedOnce = true
@@ -80,7 +88,7 @@ fun PermissionRequiredScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Location Access",
+                    text = "Critical Permissions",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = DarkNavyBlue
@@ -89,7 +97,7 @@ fun PermissionRequiredScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Accident Guard uses your location to detect emergencies and send help to your exact position. Your safety is our priority.",
+                    text = "Accident Guard requires location and audio access to detect emergencies, send help, and enable voice calls during accidents. Your safety is our priority.",
                     fontSize = 14.sp,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
@@ -100,12 +108,15 @@ fun PermissionRequiredScreen(
 
                 Button(
                     onClick = {
-                        launcher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
+                        val permissions = mutableListOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.RECORD_AUDIO
                         )
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+                        }
+                        launcher.launch(permissions.toTypedArray())
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp),

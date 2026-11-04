@@ -17,6 +17,7 @@ val SafeGreen = Color(0xFF2E7D32)
 val WarningOrange = Color(0xFFF57C00)
 val DangerRed = Color(0xFFD32F2F)
 val DangerRedBg = Color(0xFFFFEBEE)
+val ErrorRed = Color(0xFFEF4444) // Defining ErrorRed consistent with SafetyRed
 
 val SurfaceCard = Color(0xFFFFFFFF)
 val TextPrimary = Color(0xFF212121)

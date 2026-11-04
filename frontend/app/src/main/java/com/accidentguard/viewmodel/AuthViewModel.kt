@@ -83,7 +83,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             token = hospLoginData.accessToken,
             hospital = hospLoginData.hospital
         )
-        syncFcmToken(hospLoginData.accessToken)
+        // Note: No hospital-specific FCM endpoint exists yet; skipping sync.
         _uiState.value = AuthUiState.Success("Hospital unit connected: ${hospLoginData.hospital.name}", role = "hospital")
     }
 
@@ -203,10 +203,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         val jwtToken = tokenManager.getAuthToken()
-        if (!jwtToken.isNullOrEmpty()) {
+        val isHospital = tokenManager.isHospital()
+        
+        if (!jwtToken.isNullOrEmpty() && !isHospital) {
             viewModelScope.launch {
                 try {
-                    // Clear FCM token on backend before logging out
+                    // Clear FCM token on backend before logging out (Users only)
                     RetrofitClient.apiService.updateFcmToken(
                         authHeader = "Bearer $jwtToken",
                         request = FcmTokenRequest(fcmToken = "")
@@ -218,6 +220,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 notificationHelper.showNotification("Account", "Logged out securely.")
             }
         } else {
+            // Hospitals or no token: clear locally without FCM sync
             tokenManager.clear()
             notificationHelper.showNotification("Account", "Logged out.")
         }

@@ -20,6 +20,9 @@ class AccidentResponse(BaseModel):
     impact_g: float
     status: str
     timestamp: datetime
+    call_session_id: Optional[int] = None
+    livekit_token: Optional[str] = None
+    livekit_url: Optional[str] = None
 
     class Config:
         from_attributes = True

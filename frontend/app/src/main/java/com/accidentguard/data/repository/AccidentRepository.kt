@@ -2,6 +2,7 @@ package com.accidentguard.data.repository
 
 import com.accidentguard.data.api.RetrofitClient
 import com.accidentguard.data.model.Accident
+import com.accidentguard.data.model.AccidentCreateRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -29,6 +30,19 @@ class AccidentRepository {
                 Accident(3L, 1L, "15 September 2026", "09:12 AM", 21.1490, 79.0880, 2.1f, "false_alarm", "2026-09-15 09:12:00", source = "demo")
             )
             Result.success(demoList)
+        }
+    }
+
+    suspend fun reportAccident(token: String, request: AccidentCreateRequest): Result<Accident> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.reportAccident("Bearer $token", request)
+            if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
+                Result.success(response.body()!!.data!!)
+            } else {
+                Result.failure(Exception("Failed to report accident: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

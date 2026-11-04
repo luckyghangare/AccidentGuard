@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     FIREBASE_SERVICE_ACCOUNT_PATH: Optional[str] = None
     FIREBASE_PROJECT_ID: Optional[str] = None
 
+    # LiveKit Cloud Settings
+    LIVEKIT_URL: str
+    LIVEKIT_API_KEY: str
+    LIVEKIT_API_SECRET: str
+    LIVEKIT_TOKEN_TTL: int = 3600
+
     # JWT Settings
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
